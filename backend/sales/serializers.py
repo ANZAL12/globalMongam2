@@ -7,16 +7,28 @@ class SaleEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleEntry
         fields = [
-            'id', 'promoter', 'promoter_email', 'product_name', 'bill_amount', 
-            'bill_image', 'status', 'incentive_amount', 'payment_status', 'created_at'
+            'id', 'promoter', 'promoter_email', 'product_name', 'bill_amount', 'bill_no',
+            'bill_image', 'status', 'incentive_amount', 'payment_status', 'created_at',
+            'approved_by', 'approved_at', 'paid_at'
         ]
-        read_only_fields = ['id', 'promoter', 'status', 'incentive_amount', 'payment_status', 'created_at']
+        read_only_fields = ['id', 'promoter', 'status', 'incentive_amount', 'payment_status', 'created_at', 'approved_by', 'approved_at', 'paid_at']
 
 class SaleEntryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleEntry
-        fields = ['id', 'product_name', 'bill_amount', 'bill_image']
+        fields = ['id', 'product_name', 'bill_amount', 'bill_no', 'bill_image']
+        extra_kwargs = {
+            'bill_no': {'required': True, 'allow_blank': False}
+        }
         read_only_fields = ['id']
+
+    def validate_bill_no(self, value):
+        if value:
+            upper_val = value.upper()
+            if SaleEntry.objects.filter(bill_no=upper_val).exists():
+                raise serializers.ValidationError("sale entry with this bill no already exists.")
+            return upper_val
+        return value
 
 class SaleStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:

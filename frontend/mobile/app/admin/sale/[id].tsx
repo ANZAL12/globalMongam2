@@ -7,6 +7,7 @@ type SaleDetail = {
     id: number;
     promoter_email: string;
     product_name: string;
+    bill_no: string | null;
     bill_amount: string;
     bill_image: string | null;
     status: string;
@@ -132,8 +133,15 @@ export default function SaleDetailScreen() {
                 <Text style={styles.label}>Product Name</Text>
                 <Text style={styles.value}>{sale.product_name}</Text>
 
+                {sale.bill_no && (
+                    <>
+                        <Text style={styles.label}>Bill Number</Text>
+                        <Text style={styles.value}>{sale.bill_no}</Text>
+                    </>
+                )}
+
                 <Text style={styles.label}>Bill Amount</Text>
-                <Text style={styles.value}>${sale.bill_amount}</Text>
+                <Text style={styles.value}>₹{sale.bill_amount}</Text>
 
                 <Text style={styles.label}>Date Submitted</Text>
                 <Text style={styles.value}>{new Date(sale.created_at).toLocaleDateString()}</Text>
@@ -162,7 +170,7 @@ export default function SaleDetailScreen() {
 
                 {!isProcessing && isPending && (
                     <View style={styles.actionsContainer}>
-                        <Text style={styles.label}>Assign Incentive Amount ($)</Text>
+                        <Text style={styles.label}>Assign Incentive Amount (₹)</Text>
                         <TextInput
                             style={styles.input}
                             value={incentiveInput}
@@ -184,7 +192,7 @@ export default function SaleDetailScreen() {
                 {!isProcessing && !isPending && (
                     <View style={styles.actionsContainer}>
                         <Text style={styles.label}>Incentive Assigned</Text>
-                        <Text style={styles.value}>{sale.incentive_amount ? `$${sale.incentive_amount}` : "None"}</Text>
+                        <Text style={styles.value}>{sale.incentive_amount ? `₹${sale.incentive_amount}` : "None"}</Text>
                     </View>
                 )}
 

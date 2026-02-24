@@ -6,6 +6,7 @@ import { useFocusEffect } from "expo-router";
 type Sale = {
     id: number;
     product_name: string;
+    bill_no: string | null;
     bill_amount: string;
     status: string;
     incentive_amount: string | null;
@@ -73,8 +74,11 @@ export default function MySales() {
                 renderItem={({ item }) => (
                     <View style={styles.card}>
                         <View style={styles.cardHeader}>
-                            <Text style={styles.productName}>{item.product_name}</Text>
-                            <Text style={styles.billAmount}>${item.bill_amount}</Text>
+                            <View>
+                                <Text style={styles.productName}>{item.product_name}</Text>
+                                {item.bill_no && <Text style={styles.billNoText}>Bill: {item.bill_no}</Text>}
+                            </View>
+                            <Text style={styles.billAmount}>₹{item.bill_amount}</Text>
                         </View>
 
                         <View style={styles.detailsRow}>
@@ -87,7 +91,7 @@ export default function MySales() {
                             <View style={{ alignItems: "flex-end" }}>
                                 <Text style={styles.label}>Incentive</Text>
                                 <Text style={styles.incentiveText}>
-                                    {item.incentive_amount ? `$${item.incentive_amount}` : "Pending"}
+                                    {item.incentive_amount ? `₹${item.incentive_amount}` : "Pending"}
                                 </Text>
                             </View>
                         </View>
@@ -140,6 +144,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: "#333",
+    },
+    billNoText: {
+        fontSize: 14,
+        color: "#666",
+        marginTop: 2,
     },
     billAmount: {
         fontSize: 18,

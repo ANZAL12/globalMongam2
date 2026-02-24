@@ -63,8 +63,6 @@ api.interceptors.response.use(
             // If we're here, refresh failed or was not possible
             await AsyncStorage.removeItem('access');
             await AsyncStorage.removeItem('refresh');
-            await AsyncStorage.removeItem('role');
-            Alert.alert('Session Expired', 'Please log in again.');
         }
         return Promise.reject(error);
     }

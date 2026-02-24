@@ -7,6 +7,7 @@ type Sale = {
     id: number;
     promoter_email: string;
     product_name: string;
+    bill_no: string | null;
     bill_amount: string;
     status: string;
     incentive_amount: string | null;
@@ -78,8 +79,11 @@ export default function AllSales() {
                         delayPressIn={100}
                     >
                         <View style={styles.cardHeader}>
-                            <Text style={styles.productName}>{item.product_name}</Text>
-                            <Text style={styles.billAmount}>${item.bill_amount}</Text>
+                            <View>
+                                <Text style={styles.productName}>{item.product_name}</Text>
+                                {item.bill_no && <Text style={styles.billNoText}>Bill: {item.bill_no}</Text>}
+                            </View>
+                            <Text style={styles.billAmount}>₹{item.bill_amount}</Text>
                         </View>
 
                         <Text style={styles.promoterEmail}>{item.promoter_email}</Text>
@@ -135,6 +139,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: "#333",
+    },
+    billNoText: {
+        fontSize: 14,
+        color: "#666",
+        marginTop: 2,
     },
     billAmount: {
         fontSize: 18,

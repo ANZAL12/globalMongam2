@@ -150,3 +150,15 @@ class PromoterDetailView(generics.RetrieveAPIView):
     serializer_class = PromoterDetailSerializer
     permission_classes = [IsAdminUserRole]
     queryset = User.objects.filter(role='promoter')
+
+class UpdatePushTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('expo_push_token')
+        if token is None:
+            return Response({"error": "No token provided"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        request.user.expo_push_token = token
+        request.user.save(update_fields=['expo_push_token'])
+        return Response({"message": "Push token updated successfully"}, status=status.HTTP_200_OK)

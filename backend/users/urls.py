@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GoogleLoginView, TestProtectedView, CreatePromoterView, PromoterListView, PasswordLoginView, PromoterDetailView
+from .views import GoogleLoginView, TestProtectedView, CreatePromoterView, PromoterListView, PasswordLoginView, PromoterDetailView, UpdatePushTokenView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('admin/promoters/', PromoterListView.as_view(), name='promoter-list'),
     path('admin/promoter/<int:pk>/', PromoterDetailView.as_view(), name='promoter-detail'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('update-push-token/', UpdatePushTokenView.as_view(), name='update-push-token'),
 ]

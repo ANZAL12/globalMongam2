@@ -18,11 +18,6 @@ export default function Login() {
 
     const redirectUri = AuthSession.makeRedirectUri();
 
-    console.log("-----------------------------------------");
-    console.log("👉 ADD THIS EXACT URI TO GOOGLE CONSOLE:");
-    console.log(redirectUri);
-    console.log("-----------------------------------------");
-
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
     });

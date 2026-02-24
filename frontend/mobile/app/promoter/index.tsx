@@ -66,7 +66,7 @@ export default function PromoterDashboard() {
 
                 <View style={[styles.card, { borderLeftColor: "#9c27b0" }]}>
                     <Text style={styles.cardTitle}>Total Incentive</Text>
-                    <Text style={styles.cardValue}>${totalIncentive.toFixed(2)}</Text>
+                    <Text style={styles.cardValue}>₹{totalIncentive.toFixed(2)}</Text>
                 </View>
             </View>
         </ScrollView>

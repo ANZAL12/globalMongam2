@@ -5,6 +5,7 @@ from core.permissions import IsAdminUserRole, IsPromoter
 from .models import SaleEntry
 from .serializers import SaleEntrySerializer, SaleEntryCreateSerializer, SaleStatusUpdateSerializer
 from django.utils import timezone
+from core.notifications import send_push_message
 
 class SaleCreateView(generics.CreateAPIView):
     serializer_class = SaleEntryCreateSerializer
@@ -18,12 +19,12 @@ class PromoterSaleListView(generics.ListAPIView):
     permission_classes = [IsPromoter]
 
     def get_queryset(self):
-        return SaleEntry.objects.filter(promoter=self.request.user).order_by('-created_at')
+        return SaleEntry.objects.filter(promoter=self.request.user, is_active=True).order_by('-created_at')
 
 class AdminSaleListView(generics.ListAPIView):
     serializer_class = SaleEntrySerializer
     permission_classes = [IsAdminUserRole]
-    queryset = SaleEntry.objects.all().order_by('-created_at')
+    queryset = SaleEntry.objects.filter(is_active=True).order_by('-created_at')
 
 class AdminSaleApproveView(generics.UpdateAPIView):
     queryset = SaleEntry.objects.all()
@@ -38,7 +39,19 @@ class AdminSaleApproveView(generics.UpdateAPIView):
         request.data['status'] = 'approved'
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        
+        instance.approved_by = self.request.user
+        instance.approved_at = timezone.now()
         self.perform_update(serializer)
+        
+        # Send Notification to Promoter
+        if instance.promoter and instance.promoter.expo_push_token:
+            send_push_message(
+                token=instance.promoter.expo_push_token,
+                title="Sale Approved! ✅",
+                message=f"Your sale for {instance.product_name} has been approved.",
+                extra={"sale_id": instance.id}
+            )
         
         # Return full representation
         return Response(SaleEntrySerializer(instance).data)
@@ -54,6 +67,16 @@ class AdminSaleRejectView(generics.UpdateAPIView):
         
         instance.status = 'rejected'
         instance.save()
+        
+        # Send Notification to Promoter
+        if instance.promoter and instance.promoter.expo_push_token:
+            send_push_message(
+                token=instance.promoter.expo_push_token,
+                title="Sale Rejected ❌",
+                message=f"Your sale for {instance.product_name} has been rejected.",
+                extra={"sale_id": instance.id}
+            )
+            
         return Response(SaleEntrySerializer(instance).data)
 
 class AdminSaleMarkPaidView(generics.UpdateAPIView):
@@ -68,5 +91,16 @@ class AdminSaleMarkPaidView(generics.UpdateAPIView):
             return Response({"detail": "Sale is already marked as paid."}, status=status.HTTP_400_BAD_REQUEST)
             
         instance.payment_status = 'paid'
+        instance.paid_at = timezone.now()
         instance.save()
+        
+        # Send Notification to Promoter
+        if instance.promoter and instance.promoter.expo_push_token:
+            send_push_message(
+                token=instance.promoter.expo_push_token,
+                title="Incentive Paid! 💰",
+                message=f"You have been paid ₹{instance.incentive_amount} for {instance.product_name}.",
+                extra={"sale_id": instance.id}
+            )
+            
         return Response(SaleEntrySerializer(instance).data)

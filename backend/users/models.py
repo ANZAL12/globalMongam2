@@ -31,6 +31,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='promoter')
     google_id = models.CharField(max_length=255, null=True, blank=True)
+    expo_push_token = models.CharField(max_length=255, null=True, blank=True)
     shop_name = models.CharField(max_length=255, null=True, blank=True)
     full_name = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)

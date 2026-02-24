@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, ScrollView, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import api from "../../../services/api";
 import { useRouter } from "expo-router";
@@ -20,7 +20,7 @@ export default function CreateAnnouncement() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: 'images',
             quality: 0.8,
         });
 
@@ -39,18 +39,24 @@ export default function CreateAnnouncement() {
         try {
             const formData = new FormData();
             formData.append("title", title);
-            formData.append("content", content);
+            formData.append("description", content);
 
             if (imageUri) {
-                const filename = imageUri.split('/').pop() || 'announcement.jpg';
-                const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image`;
+                if (Platform.OS === 'web') {
+                    const response = await fetch(imageUri);
+                    const blob = await response.blob();
+                    formData.append("image", blob, "announcement.jpg");
+                } else {
+                    const filename = imageUri.split('/').pop() || 'announcement.jpg';
+                    const match = /\.(\w+)$/.exec(filename);
+                    const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-                formData.append("image", {
-                    uri: imageUri,
-                    name: filename,
-                    type,
-                } as any);
+                    formData.append("image", {
+                        uri: imageUri,
+                        name: filename,
+                        type,
+                    } as any);
+                }
             }
 
             await api.post("/announcements/create/", formData, {
