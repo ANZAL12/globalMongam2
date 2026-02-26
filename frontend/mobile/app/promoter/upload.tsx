@@ -7,6 +7,8 @@ import { useRouter } from "expo-router";
 export default function UploadSale() {
     const router = useRouter();
     const [productName, setProductName] = useState("");
+    const [modelNo, setModelNo] = useState("");
+    const [serialNo, setSerialNo] = useState("");
     const [billNo, setBillNo] = useState("");
     const [billAmount, setBillAmount] = useState("");
     const [imageUri, setImageUri] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function UploadSale() {
     };
 
     const handleSubmit = async () => {
-        if (!productName || !billNo || !billAmount || !imageUri) {
+        if (!productName || !modelNo || !serialNo || !billNo || !billAmount || !imageUri) {
             Alert.alert("Missing Fields", "Please fill in all mandatory fields (*) and select an image.");
             return;
         }
@@ -58,6 +60,8 @@ export default function UploadSale() {
         try {
             const formData = new FormData();
             formData.append("product_name", productName);
+            formData.append("model_no", modelNo);
+            formData.append("serial_no", serialNo);
             formData.append("bill_no", billNo);
             formData.append("bill_amount", billAmount);
 
@@ -87,6 +91,8 @@ export default function UploadSale() {
 
             Alert.alert("Success", "Sale uploaded successfully!");
             setProductName("");
+            setModelNo("");
+            setSerialNo("");
             setBillNo("");
             setBillAmount("");
             setImageUri(null);
@@ -129,6 +135,22 @@ export default function UploadSale() {
                 placeholder="e.g. Samsung S23"
                 value={productName}
                 onChangeText={setProductName}
+            />
+
+            <Text style={styles.label}>Model No *</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="e.g. SM-S911B"
+                value={modelNo}
+                onChangeText={setModelNo}
+            />
+
+            <Text style={styles.label}>Serial No *</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="e.g. RZ8T123456"
+                value={serialNo}
+                onChangeText={setSerialNo}
             />
 
             <Text style={styles.label}>Bill No *</Text>

@@ -12,11 +12,18 @@ class AnnouncementCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         announcement = serializer.save()
         
-        # Notify all promoters
+        # Notify promoters
         from users.models import User
         from core.notifications import send_push_message
         
-        promoters = User.objects.filter(role='promoter', expo_push_token__isnull=False).exclude(expo_push_token='')
+        targets = announcement.target_promoters.all()
+        if targets.exists():
+            # Notify only the targeted promoters
+            promoters = [p for p in targets if p.expo_push_token]
+        else:
+            # Notify all promoters
+            promoters = User.objects.filter(role='promoter', expo_push_token__isnull=False).exclude(expo_push_token='')
+            
         for promoter in promoters:
             send_push_message(
                 token=promoter.expo_push_token,
@@ -26,9 +33,16 @@ class AnnouncementCreateView(generics.CreateAPIView):
             )
 
 class AnnouncementListView(generics.ListAPIView):
-    queryset = Announcement.objects.all().order_by('-created_at')
     serializer_class = AnnouncementSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Announcement.objects.all().order_by('-created_at')
+        if getattr(user, 'role', None) == 'promoter':
+            from django.db.models import Q
+            queryset = queryset.filter(Q(target_promoters__isnull=True) | Q(target_promoters=user)).distinct()
+        return queryset
 
 class AnnouncementDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Announcement.objects.all()

@@ -7,6 +7,8 @@ type Sale = {
     id: number;
     promoter_email: string;
     product_name: string;
+    model_no: string | null;
+    serial_no: string | null;
     bill_no: string | null;
     bill_amount: string;
     status: string;
@@ -81,6 +83,8 @@ export default function AllSales() {
                         <View style={styles.cardHeader}>
                             <View>
                                 <Text style={styles.productName}>{item.product_name}</Text>
+                                {item.model_no && <Text style={styles.billNoText}>Model: {item.model_no}</Text>}
+                                {item.serial_no && <Text style={styles.billNoText}>Serial: {item.serial_no}</Text>}
                                 {item.bill_no && <Text style={styles.billNoText}>Bill: {item.bill_no}</Text>}
                             </View>
                             <Text style={styles.billAmount}>₹{item.bill_amount}</Text>

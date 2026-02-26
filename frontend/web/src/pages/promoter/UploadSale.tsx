@@ -5,6 +5,8 @@ import api from '../../services/api';
 export default function PromoterUploadSale() {
     const navigate = useNavigate();
     const [productName, setProductName] = useState('');
+    const [modelNo, setModelNo] = useState('');
+    const [serialNo, setSerialNo] = useState('');
     const [billNo, setBillNo] = useState('');
     const [billAmount, setBillAmount] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -49,7 +51,7 @@ export default function PromoterUploadSale() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!productName || !billNo || !billAmount || !imageFile) {
+        if (!productName || !modelNo || !serialNo || !billNo || !billAmount || !imageFile) {
             alert('Please fill in all mandatory fields (*) and select an image.');
             return;
         }
@@ -58,6 +60,8 @@ export default function PromoterUploadSale() {
         try {
             const formData = new FormData();
             formData.append('product_name', productName);
+            formData.append('model_no', modelNo);
+            formData.append('serial_no', serialNo);
             formData.append('bill_no', billNo);
             formData.append('bill_amount', billAmount);
             formData.append('bill_image', imageFile);
@@ -70,6 +74,8 @@ export default function PromoterUploadSale() {
 
             alert('Sale uploaded successfully!');
             setProductName('');
+            setModelNo('');
+            setSerialNo('');
             setBillNo('');
             setBillAmount('');
             setImageFile(null);
@@ -115,6 +121,24 @@ export default function PromoterUploadSale() {
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
                     placeholder="e.g. Samsung S23"
+                    className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
+                />
+
+                <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Model No *</label>
+                <input
+                    type="text"
+                    value={modelNo}
+                    onChange={(e) => setModelNo(e.target.value)}
+                    placeholder="e.g. SM-S911B"
+                    className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
+                />
+
+                <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Serial No *</label>
+                <input
+                    type="text"
+                    value={serialNo}
+                    onChange={(e) => setSerialNo(e.target.value)}
+                    placeholder="e.g. RZ8T123456"
                     className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
                 />
 

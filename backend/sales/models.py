@@ -17,6 +17,8 @@ class SaleEntry(models.Model):
 
     promoter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sales')
     product_name = models.CharField(max_length=255)
+    model_no = models.CharField(max_length=100, null=True, blank=True)
+    serial_no = models.CharField(max_length=100, null=True, blank=True)
     bill_amount = models.DecimalField(max_digits=10, decimal_places=2)
     bill_no = models.CharField(max_length=100, unique=True)
     bill_image = models.ImageField(upload_to='bills/')

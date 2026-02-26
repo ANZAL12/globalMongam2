@@ -17,6 +17,8 @@ const safeStorage = {
 interface Sale {
     id: number;
     product_name: string;
+    model_no: string | null;
+    serial_no: string | null;
     bill_amount: string;
     status: string;
     incentive_amount: string;
@@ -86,7 +88,11 @@ export default function PromoterDetailScreen() {
             activeOpacity={0.7}
         >
             <View style={styles.incentiveHeader}>
-                <Text style={styles.productName}>{item.product_name}</Text>
+                <View>
+                    <Text style={styles.productName}>{item.product_name}</Text>
+                    {item.model_no && <Text style={{ fontSize: 12, color: "#666", marginTop: 2 }}>Model: {item.model_no}</Text>}
+                    {item.serial_no && <Text style={{ fontSize: 12, color: "#666", marginTop: 2 }}>Serial: {item.serial_no}</Text>}
+                </View>
                 <View style={styles.headerRightAction}>
                     <View style={[styles.statusBadge, item.status === 'approved' ? styles.approvedBadge : item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge]}>
                         <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>

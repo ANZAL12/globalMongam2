@@ -6,6 +6,8 @@ type Sale = {
     id: number;
     promoter_email: string;
     product_name: string;
+    model_no: string | null;
+    serial_no: string | null;
     bill_no: string | null;
     bill_amount: string;
     status: string;
@@ -68,6 +70,8 @@ export default function AdminSales() {
                             <div className="flex flex-row justify-between mb-[5px]">
                                 <div>
                                     <h3 className="text-[18px] font-bold text-[#333]">{item.product_name}</h3>
+                                    {item.model_no && <p className="text-[14px] text-[#666] mt-[2px]">Model: {item.model_no}</p>}
+                                    {item.serial_no && <p className="text-[14px] text-[#666] mt-[2px]">Serial: {item.serial_no}</p>}
                                     {item.bill_no && <p className="text-[14px] text-[#666] mt-[2px]">Bill: {item.bill_no}</p>}
                                 </div>
                                 <span className="text-[18px] font-bold text-[#1976d2]">₹{item.bill_amount}</span>

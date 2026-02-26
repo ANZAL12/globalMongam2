@@ -7,7 +7,16 @@ type Announcement = {
     title: string;
     description: string;
     image: string | null;
+    target_promoters: number[];
+    target_promoter_emails: string[];
     created_at: string;
+};
+
+type Promoter = {
+    id: number;
+    email: string;
+    full_name: string;
+    shop_name: string;
 };
 
 export default function AdminAnnouncements() {
@@ -21,9 +30,21 @@ export default function AdminAnnouncements() {
     const [content, setContent] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [targetPromoters, setTargetPromoters] = useState<number[]>([]);
+    const [promoters, setPromoters] = useState<Promoter[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchPromoters = async () => {
+        try {
+            const res = await api.get('/auth/admin/promoters/');
+            setPromoters(res.data);
+        } catch (err) {
+            console.error('Failed to fetch promoters', err);
+        }
+    };
 
     const fetchAnnouncements = async () => {
         try {
@@ -39,6 +60,7 @@ export default function AdminAnnouncements() {
 
     useEffect(() => {
         fetchAnnouncements();
+        fetchPromoters();
     }, []);
 
     const resetForm = () => {
@@ -46,6 +68,8 @@ export default function AdminAnnouncements() {
         setContent('');
         setImageFile(null);
         setImagePreview(null);
+        setTargetPromoters([]);
+        setSearchQuery('');
         setEditingId(null);
         setError('');
         setIsFormVisible(false);
@@ -61,6 +85,8 @@ export default function AdminAnnouncements() {
         setTitle(announcement.title);
         setContent(announcement.description);
         setImagePreview(announcement.image ? `http://127.0.0.1:8000${announcement.image}` : null);
+        setTargetPromoters(announcement.target_promoters || []);
+        setSearchQuery('');
         setImageFile(null);
         setEditingId(announcement.id);
         setError('');
@@ -101,6 +127,9 @@ export default function AdminAnnouncements() {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', content);
+            targetPromoters.forEach(id => {
+                formData.append('target_promoters', id.toString());
+            });
 
             if (imageFile) {
                 formData.append('image', imageFile);
@@ -171,6 +200,58 @@ export default function AdminAnnouncements() {
                             className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] h-[120px] resize-none"
                         />
 
+                        <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Target Promoters (Optional)</label>
+                        <p className="text-[12px] text-[#666] mb-[8px]">Click multiple to select. Deselect all to notify everyone.</p>
+                        <input
+                            type="text"
+                            placeholder="Search promoters by name, email, or shop..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="border border-[#ccc] rounded-[8px] p-[10px] text-[14px] mb-[10px] bg-[#fafafa] outline-none focus:border-[#1976d2] w-full"
+                        />
+                        <div className="flex overflow-x-auto pb-2 mb-4 gap-2 scrollbar-thin scrollbar-thumb-gray-300">
+                            <button
+                                type="button"
+                                onClick={() => setTargetPromoters([])}
+                                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border ${(!targetPromoters || targetPromoters.length === 0)
+                                        ? 'bg-[#1976d2] text-white border-[#1976d2]'
+                                        : 'bg-white text-[#666] border-[#ccc] hover:bg-gray-50'
+                                    }`}
+                            >
+                                All Promoters
+                            </button>
+                            {promoters.filter(p => {
+                                const name = p.full_name || '';
+                                const email = p.email || '';
+                                const shop = p.shop_name || '';
+                                const query = searchQuery.toLowerCase();
+                                return name.toLowerCase().includes(query) ||
+                                    email.toLowerCase().includes(query) ||
+                                    shop.toLowerCase().includes(query);
+                            }).map((p) => {
+                                const isSelected = (targetPromoters || []).includes(p.id);
+                                return (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                setTargetPromoters((prev) => prev.filter(id => id !== p.id));
+                                            } else {
+                                                setTargetPromoters((prev) => [...(prev || []), p.id]);
+                                            }
+                                        }}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border ${isSelected
+                                                ? 'bg-[#1976d2] text-white border-[#1976d2]'
+                                                : 'bg-white text-[#666] border-[#ccc] hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {p.full_name || p.email}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Feature Image (Optional)</label>
                         <div className="flex flex-col items-center mb-[30px]">
                             {imagePreview ? (
@@ -238,6 +319,7 @@ export default function AdminAnnouncements() {
                                     <h3 className="text-[20px] font-bold text-[#333] pr-[80px] mb-[5px]">{item.title}</h3>
                                     <p className="text-[12px] text-[#888] mb-[10px]">
                                         {new Date(item.created_at).toLocaleDateString()}
+                                        {item.target_promoter_emails && item.target_promoter_emails.length > 0 && ` • Targets: ${item.target_promoter_emails.join(', ')}`}
                                     </p>
 
                                     {item.image && (

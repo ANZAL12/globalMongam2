@@ -17,7 +17,7 @@ export default function Layout() {
         ? [
             { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
             { name: 'All Sales', path: '/admin/sales', icon: List },
-            { name: 'New Announcement', path: '/admin/announcements', icon: BellRing },
+            { name: 'Announcements', path: '/admin/announcements', icon: BellRing },
             { name: 'Promoters', path: '/admin/promoters', icon: Users }
         ]
         : role === 'promoter'
@@ -66,10 +66,10 @@ export default function Layout() {
                                 <Link
                                     key={item.path}
                                     to={item.path}
-                                    className="flex flex-col items-center justify-center w-full h-full gap-1"
+                                    className="flex flex-col items-center justify-center w-full h-full gap-1 px-1 overflow-hidden"
                                 >
                                     <Icon size={24} color={isActive ? '#1976d2' : '#8e8e93'} />
-                                    <span className={`text-[10px] font-medium leading-none ${isActive ? 'text-[#1976d2]' : 'text-[#8e8e93]'}`}>
+                                    <span className={`text-[10px] font-medium leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis w-full ${isActive ? 'text-[#1976d2]' : 'text-[#8e8e93]'}`}>
                                         {item.name}
                                     </span>
                                 </Link>

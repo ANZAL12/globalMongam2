@@ -8,6 +8,8 @@ type SaleDetail = {
     id: number;
     promoter_email: string;
     product_name: string;
+    model_no: string | null;
+    serial_no: string | null;
     bill_no: string | null;
     bill_amount: string;
     bill_image: string | null;
@@ -134,6 +136,20 @@ export default function SaleDetailScreen() {
 
                 <Text style={styles.label}>Product Name</Text>
                 <Text style={styles.value}>{sale.product_name}</Text>
+
+                {sale.model_no && (
+                    <>
+                        <Text style={styles.label}>Model Number</Text>
+                        <Text style={styles.value}>{sale.model_no}</Text>
+                    </>
+                )}
+
+                {sale.serial_no && (
+                    <>
+                        <Text style={styles.label}>Serial Number</Text>
+                        <Text style={styles.value}>{sale.serial_no}</Text>
+                    </>
+                )}
 
                 {sale.bill_no && (
                     <>

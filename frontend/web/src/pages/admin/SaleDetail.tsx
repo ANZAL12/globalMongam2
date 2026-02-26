@@ -7,6 +7,8 @@ type SaleDetail = {
     id: number;
     promoter_email: string;
     product_name: string;
+    model_no: string | null;
+    serial_no: string | null;
     bill_no: string | null;
     bill_amount: string;
     bill_image: string | null;
@@ -133,6 +135,20 @@ export default function AdminSaleDetail() {
                         <p className="text-[12px] text-[#888] mb-[4px]">Product Name</p>
                         <p className="text-[16px] text-[#333] font-[600]">{sale.product_name}</p>
                     </div>
+
+                    {sale.model_no && (
+                        <div className="mb-[15px]">
+                            <p className="text-[12px] text-[#888] mb-[4px]">Model Number</p>
+                            <p className="text-[16px] text-[#333] font-[600]">{sale.model_no}</p>
+                        </div>
+                    )}
+
+                    {sale.serial_no && (
+                        <div className="mb-[15px]">
+                            <p className="text-[12px] text-[#888] mb-[4px]">Serial Number</p>
+                            <p className="text-[16px] text-[#333] font-[600]">{sale.serial_no}</p>
+                        </div>
+                    )}
 
                     {sale.bill_no && (
                         <div className="mb-[15px]">

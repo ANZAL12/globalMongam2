@@ -7,7 +7,7 @@ class SaleEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleEntry
         fields = [
-            'id', 'promoter', 'promoter_email', 'product_name', 'bill_amount', 'bill_no',
+            'id', 'promoter', 'promoter_email', 'product_name', 'model_no', 'serial_no', 'bill_amount', 'bill_no',
             'bill_image', 'status', 'incentive_amount', 'payment_status', 'created_at',
             'approved_by', 'approved_at', 'paid_at'
         ]
@@ -16,9 +16,11 @@ class SaleEntrySerializer(serializers.ModelSerializer):
 class SaleEntryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleEntry
-        fields = ['id', 'product_name', 'bill_amount', 'bill_no', 'bill_image']
+        fields = ['id', 'product_name', 'model_no', 'serial_no', 'bill_amount', 'bill_no', 'bill_image']
         extra_kwargs = {
-            'bill_no': {'required': True, 'allow_blank': False}
+            'bill_no': {'required': True, 'allow_blank': False},
+            'model_no': {'required': True, 'allow_blank': False},
+            'serial_no': {'required': True, 'allow_blank': False}
         }
         read_only_fields = ['id']
 

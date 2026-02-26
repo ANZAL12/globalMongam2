@@ -14,7 +14,16 @@ type Announcement = {
     title: string;
     description: string;
     image: string | null;
+    target_promoters: number[];
+    target_promoter_emails: string[];
     created_at: string;
+};
+
+type Promoter = {
+    id: number;
+    email: string;
+    full_name: string;
+    shop_name: string;
 };
 
 export default function AdminAnnouncements() {
@@ -28,6 +37,9 @@ export default function AdminAnnouncements() {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [imageUri, setImageUri] = useState<string | null>(null);
+    const [targetPromoters, setTargetPromoters] = useState<number[]>([]);
+    const [promoters, setPromoters] = useState<Promoter[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchAnnouncements = async () => {
@@ -42,9 +54,19 @@ export default function AdminAnnouncements() {
         }
     };
 
+    const fetchPromoters = async () => {
+        try {
+            const res = await api.get("/auth/admin/promoters/");
+            setPromoters(res.data);
+        } catch (error) {
+            console.error("Failed to fetch promoters", error);
+        }
+    };
+
     useFocusEffect(
         useCallback(() => {
             fetchAnnouncements();
+            fetchPromoters();
         }, [])
     );
 
@@ -57,6 +79,8 @@ export default function AdminAnnouncements() {
         setTitle("");
         setContent("");
         setImageUri(null);
+        setTargetPromoters([]);
+        setSearchQuery("");
         setEditingId(null);
         setIsModalVisible(false);
     };
@@ -74,6 +98,8 @@ export default function AdminAnnouncements() {
                 ? (announcement.image.startsWith('http') ? announcement.image : `http://10.28.84.177:8000${announcement.image}`)
                 : null
         );
+        setTargetPromoters(announcement.target_promoters || []);
+        setSearchQuery("");
         setEditingId(announcement.id);
         setIsModalVisible(true);
     };
@@ -129,6 +155,9 @@ export default function AdminAnnouncements() {
             const formData = new FormData();
             formData.append("title", title);
             formData.append("description", content);
+            targetPromoters.forEach(id => {
+                formData.append("target_promoters", id.toString());
+            });
 
             // Only append an image if it's a newly selected local URI (starts with file://)
             if (imageUri) {
@@ -195,7 +224,10 @@ export default function AdminAnnouncements() {
                         <View style={styles.cardHeader}>
                             <View style={{ flex: 1, paddingRight: 10 }}>
                                 <Text style={styles.title}>{item.title}</Text>
-                                <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                                <Text style={styles.date}>
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                    {item.target_promoter_emails && item.target_promoter_emails.length > 0 && ` • Targets: ${item.target_promoter_emails.join(', ')}`}
+                                </Text>
                             </View>
                             <View style={styles.actionButtons}>
                                 <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
@@ -248,6 +280,49 @@ export default function AdminAnnouncements() {
                         numberOfLines={6}
                         textAlignVertical="top"
                     />
+
+                    <Text style={styles.label}>Target Promoters (Optional)</Text>
+                    <Text style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>Tap multiple to select. Deselect all to notify everyone.</Text>
+
+                    <TextInput
+                        style={[styles.input, { marginBottom: 10, paddingVertical: 8 }]}
+                        placeholder="Search promoters by name, email, or shop..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.promoterList}>
+                        <TouchableOpacity
+                            style={[styles.promoterChip, targetPromoters.length === 0 && styles.promoterChipSelected]}
+                            onPress={() => setTargetPromoters([])}
+                        >
+                            <Text style={[styles.promoterChipText, targetPromoters.length === 0 && styles.promoterChipTextSelected]}>All Promoters</Text>
+                        </TouchableOpacity>
+                        {promoters.filter(p =>
+                            p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.shop_name?.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).map(p => {
+                            const isSelected = targetPromoters.includes(p.id);
+                            return (
+                                <TouchableOpacity
+                                    key={p.id}
+                                    style={[styles.promoterChip, isSelected && styles.promoterChipSelected]}
+                                    onPress={() => {
+                                        if (isSelected) {
+                                            setTargetPromoters(prev => prev.filter(id => id !== p.id));
+                                        } else {
+                                            setTargetPromoters(prev => [...prev, p.id]);
+                                        }
+                                    }}
+                                >
+                                    <Text style={[styles.promoterChipText, isSelected && styles.promoterChipTextSelected]}>
+                                        {p.full_name || p.email}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
 
                     <Text style={styles.label}>Feature Image (Optional)</Text>
                     <View style={styles.imagePickerContainer}>
@@ -433,5 +508,31 @@ const styles = StyleSheet.create({
     },
     submitContainer: {
         marginTop: 10,
+    },
+    promoterList: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    promoterChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    promoterChipSelected: {
+        backgroundColor: '#e3f2fd',
+        borderColor: '#1976d2',
+    },
+    promoterChipText: {
+        color: '#666',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    promoterChipTextSelected: {
+        color: '#1976d2',
+        fontWeight: 'bold',
     },
 });
