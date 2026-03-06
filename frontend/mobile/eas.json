@@ -1,0 +1,25 @@
+{
+    "cli": {
+        "version": ">= 13.1.2"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal"
+        },
+        "preview": {
+            "distribution": "internal",
+            "env": {
+                "EXPO_PUBLIC_API_URL": "http://10.28.84.177:8000/api"
+            }
+        },
+        "production": {
+            "env": {
+                "EXPO_PUBLIC_API_URL": "https://api.yourdomain.com/api"
+            }
+        }
+    },
+    "submit": {
+        "production": {}
+    }
+}

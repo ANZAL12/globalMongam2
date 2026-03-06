@@ -2,14 +2,39 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 
-export const API_BASE_URL = 'http://10.28.84.177:8000/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.28.84.177:8000/api';
+
+console.log('Using API_BASE_URL:', API_BASE_URL);
 
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 10000, // 10 seconds timeout
 });
+
+api.interceptors.request.use((config) => {
+    console.log('Starting Request:', config.method?.toUpperCase(), config.url);
+    return config;
+});
+
+api.interceptors.response.use(
+    (response) => {
+        console.log('Response Success:', response.status);
+        return response;
+    },
+    (error) => {
+        console.error('Response Error:', error.message);
+        if (error.response) {
+            console.error('Error Data:', error.response.data);
+            console.error('Error Status:', error.response.status);
+        } else if (error.request) {
+            console.error('No Response Received (Request was made)');
+        }
+        return Promise.reject(error);
+    }
+);
 
 // Request interceptor to attach access token
 api.interceptors.request.use(

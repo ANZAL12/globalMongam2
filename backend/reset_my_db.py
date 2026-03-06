@@ -4,7 +4,7 @@ import sys
 
 def main():
     sys.path.append(r"a:\GlobalAgencies\backend")
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
     django.setup()
     
     from django.contrib.auth import get_user_model
@@ -16,13 +16,12 @@ def main():
         
         # Check if exists
         try:
-            admin_user = User.objects.get(username='admin')
+            admin_user = User.objects.get(email='admin@example.com')
             admin_user.set_password('password123')
-            admin_user.email = 'admin@example.com'
             admin_user.save()
             print("Admin user updated.")
         except User.DoesNotExist:
-            User.objects.create_superuser('admin', 'admin@example.com', 'password123')
+            User.objects.create_superuser(email='admin@example.com', password='password123')
             print("Admin user created.")
 
     except Exception as e:
