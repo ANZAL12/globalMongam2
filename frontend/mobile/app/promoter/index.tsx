@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
-import api from "../../services/api";
+import { supabase } from "../../services/supabase";
 
 type Sale = {
-    id: number;
+    id: string;
     status: string;
     incentive_amount: string | null;
 };
@@ -18,8 +18,16 @@ export default function PromoterDashboard() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get("/sales/my-sales/");
-            setSales(res.data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('sales')
+                .select('id, status, incentive_amount')
+                .eq('promoter_id', user.id);
+
+            if (error) throw error;
+            setSales(data || []);
         } catch (error) {
             console.error("Failed to fetch sales for dashboard", error);
         } finally {

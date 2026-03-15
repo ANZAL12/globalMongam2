@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type Announcement = {
-    id: number;
+    id: string; // UUID
     title: string;
     description: string;
-    image: string | null;
+    image_url: string | null;
     created_at: string;
 };
 
@@ -15,8 +15,33 @@ export default function PromoterAnnouncements() {
 
     const fetchAnnouncements = async () => {
         try {
-            const res = await api.get('/announcements/');
-            setAnnouncements(res.data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Fetch announcements. This is tricky due to target relationships.
+            // Ideal logic: If there are targets for an announcement, check if the current user is in them.
+            // Since RLS should handle this, or we fallback to fetching all and filtering, or querying properly.
+            // A simple approach is to query announcements and its targets. RLS is better, but for now we'll do:
+            const { data, error } = await supabase
+                .from('announcements')
+                .select(`
+                    *,
+                    announcement_targets!left (
+                        user_id
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Filter out announcements that have targets but don't include the current user
+            const validAnnouncements = (data || []).filter((ann: any) => {
+                const targets = ann.announcement_targets || [];
+                if (targets.length === 0) return true; // Targeted to all
+                return targets.some((t: any) => t.user_id === user.id);
+            });
+
+            setAnnouncements(validAnnouncements);
         } catch (error) {
             console.error('Failed to fetch announcements', error);
         } finally {
@@ -51,9 +76,9 @@ export default function PromoterAnnouncements() {
                                 {new Date(item.created_at).toLocaleDateString()}
                             </p>
 
-                            {item.image && (
+                            {item.image_url && (
                                 <img
-                                    src={`http://127.0.0.1:8000${item.image}`}
+                                    src={item.image_url}
                                     alt="Announcement"
                                     className="w-full h-[150px] object-cover rounded-[8px] mb-[10px]"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}

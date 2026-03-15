@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
 
 interface LogEntry {
     id: number;
@@ -21,14 +20,10 @@ export default function Logs() {
     }, []);
 
     const fetchLogs = async () => {
-        try {
-            const response = await api.get('/auth/admin/logs/');
-            setLogs(response.data);
-        } catch (error) {
-            console.error("Error fetching logs", error);
-        } finally {
-            setLoading(false);
-        }
+        setLoading(false);
+        // Supabase does not have a native admin log equivalent out-of-the-box like Django.
+        // It requires custom postgres triggers or viewing the Supabase Dashboard.
+        setLogs([]);
     };
 
     const getActionType = (flag: number) => {

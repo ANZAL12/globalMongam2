@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import api from "../../services/api";
+import { supabase } from "../../services/supabase";
 import { useRouter } from "expo-router";
 
 export default function UploadSale() {
@@ -58,36 +58,51 @@ export default function UploadSale() {
 
         setIsSubmitting(true);
         try {
-            const formData = new FormData();
-            formData.append("product_name", productName);
-            formData.append("model_no", modelNo);
-            formData.append("serial_no", serialNo);
-            formData.append("bill_no", billNo);
-            formData.append("bill_amount", billAmount);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User session not found.");
+
+            let bill_image_url = "";
 
             if (imageUri) {
-                if (Platform.OS === 'web') {
-                    const response = await fetch(imageUri);
-                    const blob = await response.blob();
-                    formData.append("bill_image", blob, "bill.jpg");
-                } else {
-                    const filename = imageUri.split('/').pop() || 'bill.jpg';
-                    const match = /\.(\w+)$/.exec(filename);
-                    const type = match ? `image/${match[1]}` : `image/jpeg`;
+                const fileName = `bill_${Date.now()}.jpg`;
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+ 
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('sales_bills')
+                    .upload(fileName, blob, {
+                        contentType: 'image/jpeg'
+                    });
+ 
+                if (uploadError) throw uploadError;
+ 
+                const { data: { publicUrl } } = supabase.storage
+                    .from('sales_bills')
+                    .getPublicUrl(fileName);
 
-                    formData.append("bill_image", {
-                        uri: imageUri,
-                        name: filename,
-                        type,
-                    } as any);
-                }
+                bill_image_url = publicUrl;
             }
 
-            await api.post("/sales/create/", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            const { error: dbError } = await supabase
+                .from('sales')
+                .insert([{
+                    promoter_id: user.id,
+                    product_name: productName,
+                    model_no: modelNo,
+                    serial_no: serialNo,
+                    bill_no: billNo,
+                    bill_amount: parseFloat(billAmount),
+                    bill_image_url: bill_image_url,
+                    status: 'pending',
+                    payment_status: 'unpaid'
+                }]);
+
+            if (dbError) {
+                if (dbError.code === '23505') { // Unique constraint violation
+                    throw new Error("This bill number has already been used. Please check the number.");
+                }
+                throw dbError;
+            }
 
             Alert.alert("Success", "Sale uploaded successfully!");
             setProductName("");
@@ -101,24 +116,10 @@ export default function UploadSale() {
             console.log("Upload failed", error);
 
             let alertTitle = "Submission Error";
-            let errorMessage = "We encountered a problem while uploading your sale. Please try again.";
+            let errorMessage = error.message || "We encountered a problem while uploading your sale. Please try again.";
 
-            if (error.response && error.response.data) {
-                const data = error.response.data;
-                if (data.bill_no) {
-                    const billError = data.bill_no.join(' ').toLowerCase();
-                    if (billError.includes('already exists')) {
-                        alertTitle = "Duplicate Bill";
-                        errorMessage = "This bill number has already been used. Please check the number.";
-                    } else {
-                        errorMessage = data.bill_no.join(' ');
-                    }
-                } else if (data.detail) {
-                    errorMessage = data.detail;
-                }
-            } else if (!error.response) {
-                alertTitle = "Connection Error";
-                errorMessage = "Could not connect to the server. Please check your internet connection.";
+            if (error.message && error.message.includes('already exists')) {
+                alertTitle = "Duplicate Bill";
             }
 
             Alert.alert(alertTitle, errorMessage);

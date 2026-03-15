@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from 'react-native';
 
@@ -16,7 +16,7 @@ const safeStorage = {
 };
 
 interface Promoter {
-    id: number;
+    id: string; // UUID
     email: string;
     shop_name: string;
     full_name: string;
@@ -34,13 +34,23 @@ export default function Promoters() {
 
     const fetchPromoters = async () => {
         try {
-            const token = await safeStorage.getItem('access');
-            const response = await api.get("/auth/admin/promoters/", {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setPromoters(response.data);
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('role', 'promoter')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            
+            // Map created_at to date_joined to match interface if needed
+            const mappedPromoters = (data || []).map((p: any) => ({
+                ...p,
+                date_joined: p.created_at,
+                // Supabase doesn't have is_active by default on users, let's assume true or handle if added
+                is_active: p.is_active !== undefined ? p.is_active : true
+            }));
+
+            setPromoters(mappedPromoters);
         } catch (error: any) {
             console.error("Error fetching promoters:", error);
             Alert.alert("Error", "Failed to fetch promoters list.");
@@ -116,7 +126,7 @@ export default function Promoters() {
         <View style={styles.container}>
             <FlatList
                 data={promoters}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 renderItem={renderPromoterItem}
                 contentContainerStyle={styles.listContainer}
                 refreshing={refreshing}

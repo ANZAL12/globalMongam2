@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
-import api from "../../services/api";
+import { supabase } from "../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type Sale = {
-    id: number;
+    id: string;
     product_name: string;
     model_no: string | null;
     serial_no: string | null;
@@ -23,8 +23,17 @@ export default function MySales() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get("/sales/my-sales/");
-            setSales(res.data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('sales')
+                .select('*')
+                .eq('promoter_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setSales(data || []);
         } catch (error) {
             console.error("Failed to fetch my sales", error);
         } finally {
@@ -66,7 +75,7 @@ export default function MySales() {
         <View style={styles.container}>
             <FlatList
                 data={sales}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>

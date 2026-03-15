@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, X, ZoomIn } from 'lucide-react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type SaleDetail = {
-    id: number;
+    id: string; // UUID in supabase
     promoter_email: string;
     product_name: string;
     model_no: string | null;
@@ -29,24 +29,36 @@ export default function AdminSaleDetail() {
 
     const fetchSaleDetails = async () => {
         try {
-            const res = await api.get('/sales/all/');
-            const found = res.data.find((s: SaleDetail) => s.id.toString() === id);
-            if (found) {
-                setSale(found);
-                setIncentiveInput(found.incentive_amount || '');
+            const { data, error } = await supabase
+                .from('sales')
+                .select('*, promoter:users!sales_promoter_id_fkey(email)')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                const formattedSale = {
+                    ...data,
+                    promoter_email: data.promoter?.email || 'Unknown',
+                    bill_image: data.bill_image_url
+                };
+                setSale(formattedSale as SaleDetail);
+                setIncentiveInput(formattedSale.incentive_amount || '');
             } else {
                 alert('Sale not found.');
                 navigate(-1);
             }
         } catch (error) {
             console.error('Failed to fetch sale', error);
+            alert('Sale not found.');
+            navigate(-1);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchSaleDetails();
+        if (id) fetchSaleDetails();
     }, [id]);
 
     const handleApprove = async () => {
@@ -57,13 +69,16 @@ export default function AdminSaleDetail() {
 
         setIsProcessing(true);
         try {
-            await api.patch(`/sales/${id}/approve/`, {
-                status: 'approved',
-                incentive_amount: parseFloat(incentiveInput)
-            });
+            const { error } = await supabase
+                .from('sales')
+                .update({ status: 'approved', incentive_amount: parseFloat(incentiveInput) })
+                .eq('id', id);
+
+            if (error) throw error;
             alert('Sale has been approved.');
             fetchSaleDetails();
         } catch (error) {
+            console.error(error);
             alert('Failed to approve sale.');
         } finally {
             setIsProcessing(false);
@@ -74,12 +89,16 @@ export default function AdminSaleDetail() {
         if (window.confirm("Are you sure you want to reject this sale?")) {
             setIsProcessing(true);
             try {
-                await api.patch(`/sales/${id}/reject/`, {
-                    status: 'rejected'
-                });
+                const { error } = await supabase
+                    .from('sales')
+                    .update({ status: 'rejected' })
+                    .eq('id', id);
+
+                if (error) throw error;
                 alert('Sale has been rejected.');
                 fetchSaleDetails();
             } catch (error) {
+                console.error(error);
                 alert('Failed to reject sale.');
             } finally {
                 setIsProcessing(false);
@@ -90,10 +109,16 @@ export default function AdminSaleDetail() {
     const handleMarkPaid = async () => {
         setIsProcessing(true);
         try {
-            await api.patch(`/sales/${id}/mark-paid/`);
+            const { error } = await supabase
+                .from('sales')
+                .update({ payment_status: 'paid' })
+                .eq('id', id);
+
+            if (error) throw error;
             alert('Sale marked as paid.');
             fetchSaleDetails();
         } catch (error) {
+            console.error(error);
             alert('Failed to mark as paid.');
         } finally {
             setIsProcessing(false);

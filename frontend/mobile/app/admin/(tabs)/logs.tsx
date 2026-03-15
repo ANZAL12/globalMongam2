@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type LogEntry = {
@@ -21,8 +21,9 @@ export default function AdminLogs() {
 
     const fetchLogs = async () => {
         try {
-            const res = await api.get("/auth/admin/logs/");
-            setLogs(res.data);
+            // Supabase does not have a direct equivalent to Django admin logs.
+            // For a real app, you would query a dedicated 'activity_logs' table.
+            setLogs([]);
         } catch (error) {
             console.error("Failed to fetch admin logs", error);
         } finally {

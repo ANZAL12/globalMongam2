@@ -1,14 +1,15 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Users, Megaphone, List, PlusCircle, BellRing, Activity } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const role = localStorage.getItem('role');
 
-    const onLogout = () => {
+    const onLogout = async () => {
+        await supabase.auth.signOut();
         localStorage.removeItem('access');
-        localStorage.removeItem('refresh');
         localStorage.removeItem('role');
         navigate('/');
     };

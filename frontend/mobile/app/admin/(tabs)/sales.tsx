@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity } from "react-native";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import { useRouter, useFocusEffect } from "expo-router";
 
 type Sale = {
-    id: number;
+    id: string; // UUID
     promoter_email: string;
     product_name: string;
     model_no: string | null;
@@ -25,8 +25,25 @@ export default function AllSales() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get("/sales/all/");
-            setSales(res.data);
+            const { data, error } = await supabase
+                .from('sales')
+                .select(`
+                    *,
+                    promoter:users!sales_promoter_id_fkey (
+                        email
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Map the data to fit the expected Sale type (extracting email from join)
+            const mappedSales = (data || []).map((sale: any) => ({
+                ...sale,
+                promoter_email: sale.promoter?.email || 'Unknown',
+            }));
+
+            setSales(mappedSales);
         } catch (error) {
             console.error("Failed to fetch all sales", error);
         } finally {
@@ -67,7 +84,7 @@ export default function AllSales() {
         <View style={styles.container}>
             <FlatList
                 data={sales}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>

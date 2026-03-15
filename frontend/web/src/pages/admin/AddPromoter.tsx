@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 export default function AdminAddPromoter() {
     const navigate = useNavigate();
@@ -31,11 +31,35 @@ export default function AdminAddPromoter() {
 
         setLoading(true);
         try {
-            await api.post('/auth/admin/promoters/create/', formData);
+            // Note: In a real app, creating users from an admin dashboard requires a service_role key
+            // or an Edge Function to avoid logging out the admin. For standard client setup, we use signUp.
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (authError) throw authError;
+
+            if (authData.user) {
+                // Insert into our custom users table
+                const { error: dbError } = await supabase.from('users').insert([{
+                    id: authData.user.id,
+                    email: formData.email,
+                    role: 'promoter',
+                    full_name: formData.full_name,
+                    shop_name: formData.shop_name,
+                    phone_number: formData.phone_number,
+                    gpay_number: formData.gpay_number,
+                    is_active: true
+                }]);
+
+                if (dbError) throw dbError;
+            }
+
             navigate('/admin/promoters');
         } catch (err: any) {
             console.error('Error creating promoter:', err);
-            setError(err.response?.data?.error || 'Failed to create promoter.');
+            setError(err.message || 'Failed to create promoter.');
         } finally {
             setLoading(false);
         }

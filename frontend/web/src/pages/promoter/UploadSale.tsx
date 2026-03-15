@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 export default function PromoterUploadSale() {
     const navigate = useNavigate();
@@ -58,19 +58,44 @@ export default function PromoterUploadSale() {
 
         setIsSubmitting(true);
         try {
-            const formData = new FormData();
-            formData.append('product_name', productName);
-            formData.append('model_no', modelNo);
-            formData.append('serial_no', serialNo);
-            formData.append('bill_no', billNo);
-            formData.append('bill_amount', billAmount);
-            formData.append('bill_image', imageFile);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
 
-            await api.post('/sales/create/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            // Upload image to Supabase Storage
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+            
+            let uploadedImageUrl = null;
+
+            const { error: uploadError } = await supabase.storage
+                .from('sales_bills')
+                .upload(filePath, imageFile);
+            
+            if (uploadError) {
+                console.error('Image upload failed', uploadError);
+                throw new Error("Image upload failed. Is the storage bucket created?");
+            } else {
+                const { data: publicUrlData } = supabase.storage
+                    .from('sales_bills')
+                    .getPublicUrl(filePath);
+                uploadedImageUrl = publicUrlData.publicUrl;
+            }
+
+            // Insert into Database
+            const { error: insertError } = await supabase.from('sales').insert([{
+                promoter_id: user.id,
+                product_name: productName,
+                model_no: modelNo,
+                serial_no: serialNo,
+                bill_no: billNo,
+                bill_amount: parseFloat(billAmount),
+                bill_image_url: uploadedImageUrl,
+                status: 'pending',
+                payment_status: 'unpaid'
+            }]);
+
+            if (insertError) throw insertError;
 
             alert('Sale uploaded successfully!');
             setProductName('');
@@ -83,29 +108,7 @@ export default function PromoterUploadSale() {
             navigate('/promoter');
         } catch (error: any) {
             console.error('Upload failed', error);
-
-            let alertTitle = "Submission Error";
-            let errorMessage = "We encountered a problem while uploading your sale. Please try again.";
-
-            if (error.response && error.response.data) {
-                const data = error.response.data;
-                if (data.bill_no) {
-                    const billError = data.bill_no.join(' ').toLowerCase();
-                    if (billError.includes('already exists')) {
-                        alertTitle = "Duplicate Bill";
-                        errorMessage = "This bill number has already been used. Please check the number.";
-                    } else {
-                        errorMessage = data.bill_no.join(' ');
-                    }
-                } else if (data.detail) {
-                    errorMessage = data.detail;
-                }
-            } else if (!error.response) {
-                alertTitle = "Connection Error";
-                errorMessage = "Could not connect to the server. Please check your internet connection.";
-            }
-
-            alert(`${alertTitle}: ${errorMessage}`);
+            alert(`Submission Error: ${error.message || "We encountered a problem while uploading your sale."}`);
         } finally {
             setIsSubmitting(false);
         }

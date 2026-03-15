@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Image } from "react-native";
-import api from "../../services/api";
+import { supabase } from "../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type Announcement = {
-    id: number;
+    id: string;
     title: string;
     description: string;
-    image: string | null;
+    image_url: string | null;
     created_at: string;
 };
 
@@ -18,8 +18,22 @@ export default function Announcements() {
 
     const fetchAnnouncements = async () => {
         try {
-            const res = await api.get("/announcements/");
-            setAnnouncements(res.data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('announcements')
+                .select(`
+                    *,
+                    announcement_targets!inner (
+                        user_id
+                    )
+                `)
+                .eq('announcement_targets.user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setAnnouncements(data || []);
         } catch (error) {
             console.error("Failed to fetch announcements", error);
         } finally {
@@ -51,7 +65,7 @@ export default function Announcements() {
         <View style={styles.container}>
             <FlatList
                 data={announcements}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
@@ -63,8 +77,8 @@ export default function Announcements() {
                         <Text style={styles.title}>{item.title}</Text>
                         <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
 
-                        {item.image && (
-                            <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
+                        {item.image_url && (
+                            <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
                         )}
 
                         <Text style={styles.content}>{item.description}</Text>

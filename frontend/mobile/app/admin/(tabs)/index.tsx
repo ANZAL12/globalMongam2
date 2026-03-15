@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl } from "react-native";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type Sale = {
-    id: number;
+    id: string; // UUID
     status: string;
     payment_status: string;
 };
@@ -16,8 +16,9 @@ export default function AdminDashboard() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get("/sales/all/");
-            setSales(res.data);
+            const { data, error } = await supabase.from('sales').select('id, status, payment_status');
+            if (error) throw error;
+            setSales(data || []);
         } catch (error) {
             console.error("Failed to fetch all sales", error);
         } finally {

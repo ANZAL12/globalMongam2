@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from "react-native";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -54,19 +54,30 @@ export default function AddPromoter() {
 
         setLoading(true);
         try {
-            const token = await AsyncStorage.getItem('access');
-            await api.post("/auth/admin/create-promoter/", {
+            // Note: In an Expo app, this logs out the current user by default if using standard client.
+            // Ideally an edge function is used, but for migration purposes we mimic the web behavior.
+            const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email.trim().toLowerCase(),
                 password: password.trim(),
-                shop_name: shopName.trim(),
-                full_name: fullName.trim(),
-                phone_number: phoneNumber.trim(),
-                gpay_number: gPayNumber.trim(),
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
             });
+
+            if (authError) throw authError;
+
+            if (authData.user) {
+                const { error: dbError } = await supabase.from('users').insert([{
+                    id: authData.user.id,
+                    email: email.trim().toLowerCase(),
+                    role: 'promoter',
+                    full_name: fullName.trim(),
+                    shop_name: shopName.trim(),
+                    phone_number: phoneNumber.trim(),
+                    gpay_number: gPayNumber.trim(),
+                    is_active: true
+                }]);
+
+                if (dbError) throw dbError;
+            }
+
             Alert.alert("Success", "Promoter account created successfully!");
             setEmail("");
             setShopName("");
@@ -75,11 +86,11 @@ export default function AddPromoter() {
             setGPayNumber("");
             setPassword("");
 
-            // Optionally redirect back to dashboard
+            // Redirect back to dashboard
             router.replace("/admin");
         } catch (error: any) {
             console.error(error);
-            const errorMessage = error.response?.data?.email?.[0] || error.response?.data?.error || "Failed to create promoter.";
+            const errorMessage = error.message || "Failed to create promoter.";
             Alert.alert("Error", errorMessage);
         } finally {
             setLoading(false);

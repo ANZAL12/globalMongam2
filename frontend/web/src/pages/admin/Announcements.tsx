@@ -1,19 +1,19 @@
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type Announcement = {
-    id: number;
+    id: string;
     title: string;
     description: string;
-    image: string | null;
-    target_promoters: number[];
+    image_url: string | null;
+    target_promoters: string[];
     target_promoter_emails: string[];
     created_at: string;
 };
 
 type Promoter = {
-    id: number;
+    id: string;
     email: string;
     full_name: string;
     shop_name: string;
@@ -25,12 +25,12 @@ export default function AdminAnnouncements() {
 
     // Form state (Create/Edit)
     const [isFormVisible, setIsFormVisible] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [targetPromoters, setTargetPromoters] = useState<number[]>([]);
+    const [targetPromoters, setTargetPromoters] = useState<string[]>([]);
     const [promoters, setPromoters] = useState<Promoter[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,8 +39,12 @@ export default function AdminAnnouncements() {
 
     const fetchPromoters = async () => {
         try {
-            const res = await api.get('/auth/admin/promoters/');
-            setPromoters(res.data);
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('role', 'promoter');
+            if (error) throw error;
+            setPromoters(data || []);
         } catch (err) {
             console.error('Failed to fetch promoters', err);
         }
@@ -49,8 +53,24 @@ export default function AdminAnnouncements() {
     const fetchAnnouncements = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/announcements/');
-            setAnnouncements(res.data);
+            const { data, error } = await supabase
+                .from('announcements')
+                .select(`
+                    *,
+                    announcement_targets (
+                        users ( id, email )
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            
+            const formatted = (data || []).map((ann: any) => ({
+                ...ann,
+                target_promoters: ann.announcement_targets?.map((t: any) => t.users?.id) || [],
+                target_promoter_emails: ann.announcement_targets?.map((t: any) => t.users?.email) || [],
+            }));
+            setAnnouncements(formatted);
         } catch (err) {
             console.error('Failed to fetch announcements', err);
         } finally {
@@ -84,7 +104,7 @@ export default function AdminAnnouncements() {
     const handleEdit = (announcement: Announcement) => {
         setTitle(announcement.title);
         setContent(announcement.description);
-        setImagePreview(announcement.image ? `http://127.0.0.1:8000${announcement.image}` : null);
+        setImagePreview(announcement.image_url ? announcement.image_url : null);
         setTargetPromoters(announcement.target_promoters || []);
         setSearchQuery('');
         setImageFile(null);
@@ -93,11 +113,15 @@ export default function AdminAnnouncements() {
         setIsFormVisible(true);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to delete this announcement?")) return;
 
         try {
-            await api.delete(`/announcements/${id}/`);
+            const { error } = await supabase
+                .from('announcements')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
             fetchAnnouncements();
         } catch (err) {
             console.error('Failed to delete', err);
@@ -124,25 +148,70 @@ export default function AdminAnnouncements() {
         setError('');
 
         try {
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('description', content);
-            targetPromoters.forEach(id => {
-                formData.append('target_promoters', id.toString());
-            });
+            let uploadedImageUrl = imagePreview && imagePreview.startsWith('http') ? imagePreview : null;
 
             if (imageFile) {
-                formData.append('image', imageFile);
+                const fileExt = imageFile.name.split('.').pop();
+                const fileName = `${Math.random()}.${fileExt}`;
+                const filePath = `${fileName}`;
+                
+                // Assuming 'announcements' storage bucket exists
+                const { error: uploadError } = await supabase.storage
+                    .from('announcements')
+                    .upload(filePath, imageFile);
+                
+                if (uploadError) {
+                    // Try to proceed without image if bucket doesn't exist, though typically we'd catch and throw
+                    console.error('Image upload failed, is the storage bucket created?', uploadError);
+                } else {
+                    const { data: publicUrlData } = supabase.storage
+                        .from('announcements')
+                        .getPublicUrl(filePath);
+                    uploadedImageUrl = publicUrlData.publicUrl;
+                }
             }
 
+            let announcementId = editingId;
+
             if (editingId) {
-                await api.patch(`/announcements/${editingId}/`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                const { error: updateError } = await supabase
+                    .from('announcements')
+                    .update({
+                        title,
+                        description: content,
+                        image_url: uploadedImageUrl
+                    })
+                    .eq('id', editingId);
+                
+                if (updateError) throw updateError;
+                
+                // Update targets: simplest way is to delete old and insert new
+                await supabase.from('announcement_targets').delete().eq('announcement_id', editingId);
             } else {
-                await api.post('/announcements/create/', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                const { data: newAnn, error: createError } = await supabase
+                    .from('announcements')
+                    .insert([{
+                        title,
+                        description: content,
+                        image_url: uploadedImageUrl
+                    }])
+                    .select()
+                    .single();
+                
+                if (createError) throw createError;
+                announcementId = newAnn.id;
+            }
+
+            if (targetPromoters.length > 0 && announcementId) {
+                const targetsData = targetPromoters.map(userId => ({
+                    announcement_id: announcementId,
+                    user_id: userId
+                }));
+                const { error: targetError } = await supabase
+                    .from('announcement_targets')
+                    .insert(targetsData);
+                
+                if (targetError) throw targetError;
             }
 
             resetForm();
@@ -322,9 +391,9 @@ export default function AdminAnnouncements() {
                                         {item.target_promoter_emails && item.target_promoter_emails.length > 0 && ` • Targets: ${item.target_promoter_emails.join(', ')}`}
                                     </p>
 
-                                    {item.image && (
+                                    {item.image_url && (
                                         <img
-                                            src={`http://127.0.0.1:8000${item.image}`}
+                                            src={item.image_url}
                                             alt="Announcement"
                                             className="w-full h-[150px] object-cover rounded-[8px] mb-[10px]"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView, TouchableOpacity, FlatList, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const safeStorage = {
@@ -15,7 +15,7 @@ const safeStorage = {
 };
 
 interface Sale {
-    id: number;
+    id: string; // UUID
     product_name: string;
     model_no: string | null;
     serial_no: string | null;
@@ -27,7 +27,7 @@ interface Sale {
 }
 
 interface PromoterDetail {
-    id: number;
+    id: string; // UUID
     email: string;
     shop_name: string;
     full_name: string;
@@ -47,13 +47,33 @@ export default function PromoterDetailScreen() {
 
     const fetchPromoterDetail = async () => {
         try {
-            const token = await safeStorage.getItem('access');
-            const response = await api.get(`/auth/admin/promoter/${id}/`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setPromoter(response.data);
+            // Fetch Promoter User Details
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (userError) throw userError;
+
+            // Fetch Promoter Sales
+            const { data: salesData, error: salesError } = await supabase
+                .from('sales')
+                .select('*')
+                .eq('promoter_id', id)
+                .order('created_at', { ascending: false });
+
+            if (salesError) throw salesError;
+
+            const mappedPromoter: PromoterDetail = {
+                ...userData,
+                date_joined: userData.created_at,
+                // Supabase users table might not have is_active explicitly mapped yet, default to true if missing
+                is_active: userData.is_active !== undefined ? userData.is_active : true,
+                sales_history: salesData || []
+            };
+
+            setPromoter(mappedPromoter);
         } catch (error: any) {
             console.error("Error fetching promoter detail:", error);
             Alert.alert("Error", "Failed to load promoter details.");
@@ -75,14 +95,16 @@ export default function PromoterDetailScreen() {
                     onPress: async () => {
                         setToggling(true);
                         try {
-                            const token = await safeStorage.getItem('access');
-                            const response = await api.post(
-                                `/auth/admin/promoter/${id}/toggle-status/`,
-                                {},
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
-                            setPromoter({ ...promoter, is_active: response.data.is_active });
-                            Alert.alert("Success", response.data.message);
+                            const newStatus = !promoter.is_active;
+                            const { error } = await supabase
+                                .from('users')
+                                .update({ is_active: newStatus })
+                                .eq('id', id);
+
+                            if (error) throw error;
+
+                            setPromoter({ ...promoter, is_active: newStatus });
+                            Alert.alert("Success", `Promoter account has been ${newStatus ? 'enabled' : 'disabled'}.`);
                         } catch (error: any) {
                             console.error("Error toggling status:", error);
                             Alert.alert("Error", "Failed to update promoter status.");
@@ -165,7 +187,7 @@ export default function PromoterDetailScreen() {
 
             <FlatList
                 data={promoter.sales_history}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 renderItem={renderIncentiveItem}
                 ListHeaderComponent={
                     <View style={styles.profileSection}>

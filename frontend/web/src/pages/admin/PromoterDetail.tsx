@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, User, Mail, Phone, CreditCard, Calendar, History } from 'lucide-react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 interface Sale {
-    id: number;
+    id: string; // UUID from supabase
     product_name: string;
     bill_amount: string;
     status: string;
@@ -14,14 +14,14 @@ interface Sale {
 }
 
 interface PromoterDetail {
-    id: number;
+    id: string; // UUID from supabase
     email: string;
     shop_name: string;
     full_name: string;
     phone_number: string;
     gpay_number: string;
     is_active: boolean;
-    date_joined: string;
+    created_at: string;
     sales_history: Sale[];
 }
 
@@ -33,8 +33,28 @@ export default function AdminPromoterDetail() {
 
     const fetchPromoterDetail = async () => {
         try {
-            const response = await api.get(`/auth/admin/promoter/${id}/`);
-            setPromoter(response.data);
+            // Fetch promoter details
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (userError) throw userError;
+
+            // Fetch sales history
+            const { data: salesData, error: salesError } = await supabase
+                .from('sales')
+                .select('*')
+                .eq('promoter_id', id)
+                .order('created_at', { ascending: false });
+
+            if (salesError) throw salesError;
+
+            setPromoter({
+                ...userData,
+                sales_history: salesData || []
+            });
         } catch (error: any) {
             console.error('Error fetching promoter detail:', error);
             alert('Failed to load promoter details.');
@@ -101,7 +121,7 @@ export default function AdminPromoterDetail() {
                         </div>
                         <div className="flex flex-row items-center mb-[12px]">
                             <Calendar size={20} className="text-[#666]" />
-                            <p className="ml-[12px] text-[15px] text-[#444]">Joined: {new Date(promoter.date_joined).toLocaleDateString()}</p>
+                            <p className="ml-[12px] text-[15px] text-[#444]">Joined: {new Date(promoter.created_at).toLocaleDateString()}</p>
                         </div>
                     </div>
                 </div>

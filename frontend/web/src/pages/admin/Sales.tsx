@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type Sale = {
-    id: number;
+    id: string; // UUID in supabase
     promoter_email: string;
     product_name: string;
     model_no: string | null;
@@ -23,8 +23,22 @@ export default function AdminSales() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get('/sales/all/');
-            setSales(res.data);
+            const { data, error } = await supabase
+                .from('sales')
+                .select(`
+                    *,
+                    promoter:users!sales_promoter_id_fkey(email)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const formattedSales = (data || []).map((sale: any) => ({
+                ...sale,
+                promoter_email: sale.promoter?.email || 'Unknown'
+            }));
+
+            setSales(formattedSales);
         } catch (error) {
             console.error('Failed to fetch all sales', error);
         } finally {

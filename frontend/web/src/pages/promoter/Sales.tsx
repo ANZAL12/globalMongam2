@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type Sale = {
-    id: number;
+    id: string; // UUID
     product_name: string;
     model_no: string | null;
     serial_no: string | null;
@@ -20,8 +20,17 @@ export default function PromoterSales() {
 
     const fetchSales = async () => {
         try {
-            const res = await api.get('/sales/my-sales/');
-            setSales(res.data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('sales')
+                .select('*')
+                .eq('promoter_id', user.id)
+                .order('created_at', { ascending: false });
+                
+            if (error) throw error;
+            setSales(data || []);
         } catch (error) {
             console.error('Failed to fetch my sales', error);
         } finally {

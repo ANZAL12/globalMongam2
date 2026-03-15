@@ -6,21 +6,21 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from '@expo/vector-icons';
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type Announcement = {
-    id: number;
+    id: string;
     title: string;
     description: string;
-    image: string | null;
-    target_promoters: number[];
+    image_url: string | null;
+    target_promoters: string[];
     target_promoter_emails: string[];
     created_at: string;
 };
 
 type Promoter = {
-    id: number;
+    id: string;
     email: string;
     full_name: string;
     shop_name: string;
@@ -33,19 +33,41 @@ export default function AdminAnnouncements() {
 
     // Form Modal State
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [imageUri, setImageUri] = useState<string | null>(null);
-    const [targetPromoters, setTargetPromoters] = useState<number[]>([]);
+    const [targetPromoters, setTargetPromoters] = useState<string[]>([]);
     const [promoters, setPromoters] = useState<Promoter[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchAnnouncements = async () => {
         try {
-            const res = await api.get("/announcements/");
-            setAnnouncements(res.data);
+            const { data, error } = await supabase
+                .from('announcements')
+                .select(`
+                    *,
+                    announcement_targets(user_id)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Optional: Map targets if we want to display target counts or emails
+            // We'd need to fetch user emails for those targets if we want them displayed
+            // For now, mirroring just the basic struct
+            const mapped = (data || []).map((ann: any) => ({
+                id: ann.id,
+                title: ann.title,
+                description: ann.description,
+                image_url: ann.image_url,
+                created_at: ann.created_at,
+                target_promoters: ann.announcement_targets?.map((t: any) => t.user_id) || [],
+                target_promoter_emails: [], // Could fetch if needed, omitting for speed or fetch separately
+            }));
+
+            setAnnouncements(mapped);
         } catch (error) {
             console.error("Failed to fetch announcements", error);
         } finally {
@@ -56,8 +78,13 @@ export default function AdminAnnouncements() {
 
     const fetchPromoters = async () => {
         try {
-            const res = await api.get("/auth/admin/promoters/");
-            setPromoters(res.data);
+            const { data, error } = await supabase
+                .from('users')
+                .select('id, email, full_name, shop_name')
+                .eq('role', 'promoter');
+            
+            if (error) throw error;
+            setPromoters(data || []);
         } catch (error) {
             console.error("Failed to fetch promoters", error);
         }
@@ -94,8 +121,8 @@ export default function AdminAnnouncements() {
         setTitle(announcement.title);
         setContent(announcement.description);
         setImageUri(
-            announcement.image
-                ? (announcement.image.startsWith('http') ? announcement.image : `http://10.28.84.177:8000${announcement.image}`)
+            announcement.image_url
+                ? (announcement.image_url.startsWith('http') ? announcement.image_url : `http://10.28.84.177:8000${announcement.image_url}`)
                 : null
         );
         setTargetPromoters(announcement.target_promoters || []);
@@ -104,7 +131,7 @@ export default function AdminAnnouncements() {
         setIsModalVisible(true);
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: string) => {
         Alert.alert(
             "Delete Announcement",
             "Are you sure you want to delete this announcement?",
@@ -115,7 +142,9 @@ export default function AdminAnnouncements() {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await api.delete(`/announcements/${id}/`);
+                            // Supabase will cascade delete targets
+                            const { error } = await supabase.from('announcements').delete().eq('id', id);
+                            if (error) throw error;
                             fetchAnnouncements();
                         } catch (error) {
                             Alert.alert("Error", "Failed to delete announcement.");
@@ -152,41 +181,64 @@ export default function AdminAnnouncements() {
 
         setIsSubmitting(true);
         try {
-            const formData = new FormData();
-            formData.append("title", title);
-            formData.append("description", content);
-            targetPromoters.forEach(id => {
-                formData.append("target_promoters", id.toString());
-            });
+            let uploadedImageUrl = null;
 
-            // Only append an image if it's a newly selected local URI (starts with file://)
-            if (imageUri) {
-                if (imageUri.startsWith('file://')) {
-                    const filename = imageUri.split('/').pop() || 'announcement.jpg';
-                    const match = /\.(\w+)$/.exec(filename);
-                    const type = match ? `image/${match[1]}` : `image/jpeg`;
+            if (imageUri && imageUri.startsWith('file://')) {
+                // Upload to supabase
+                const fileExt = imageUri.split('.').pop() || 'jpg';
+                const fileName = `${Math.random()}.${fileExt}`;
+                
+                // Fetch the file to convert it to a Blob for React Native Supabase upload
+                const res = await fetch(imageUri);
+                const blob = await res.blob();
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('announcements')
+                    .upload(fileName, blob, { contentType: `image/${fileExt}` });
 
-                    formData.append("image", {
-                        uri: imageUri,
-                        name: filename,
-                        type,
-                    } as any);
-                }
-            } else if (editingId) {
-                // If editing and imageUri is null, tell backend to clear the image
-                formData.append("image", "");
+                if (uploadError) throw new Error("Failed to upload image.");
+
+                const { data } = supabase.storage.from('announcements').getPublicUrl(fileName);
+                uploadedImageUrl = data.publicUrl;
             }
 
+            let savedAnnouncementId = editingId;
+
             if (editingId) {
-                await api.patch(`/announcements/${editingId}/`, formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                const updateData: any = { title, description: content };
+                if (uploadedImageUrl) {
+                    updateData.image_url = uploadedImageUrl;
+                } else if (!imageUri) {
+                    updateData.image_url = null; // Cleared
+                }
+
+                const { error } = await supabase.from('announcements').update(updateData).eq('id', editingId);
+                if (error) throw error;
+
+                // Delete old targets
+                await supabase.from('announcement_targets').delete().eq('announcement_id', editingId);
                 Alert.alert("Success", "Announcement updated!");
             } else {
-                await api.post("/announcements/create/", formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                const { data, error } = await supabase.from('announcements').insert([{
+                    title,
+                    description: content,
+                    image_url: uploadedImageUrl,
+                }]).select();
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    savedAnnouncementId = data[0].id;
+                }
                 Alert.alert("Success", "Announcement posted!");
+            }
+
+            // Insert targets if any
+            if (savedAnnouncementId && targetPromoters.length > 0) {
+                const targetInserts = targetPromoters.map(uid => ({
+                    announcement_id: savedAnnouncementId,
+                    user_id: uid
+                }));
+                await supabase.from('announcement_targets').insert(targetInserts);
             }
 
             resetForm();
@@ -236,9 +288,9 @@ export default function AdminAnnouncements() {
                             </View>
                         </View>
 
-                        {item.image && (
+                        {item.image_url && (
                             <Image
-                                source={{ uri: item.image.startsWith('http') ? item.image : `http://10.28.84.177:8000${item.image}` }}
+                                source={{ uri: item.image_url.startsWith('http') ? item.image_url : `http://10.28.84.177:8000${item.image_url}` }}
                                 style={styles.image}
                                 resizeMode="cover"
                             />

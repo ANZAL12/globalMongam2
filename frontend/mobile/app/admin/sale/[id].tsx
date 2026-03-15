@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Button, Alert, TextInput, Modal, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import api from "../../../services/api";
+import { supabase } from "../../../services/supabase";
 
 type SaleDetail = {
-    id: number;
+    id: string;
     promoter_email: string;
     product_name: string;
     model_no: string | null;
@@ -34,11 +34,27 @@ export default function SaleDetailScreen() {
 
     const fetchSaleDetails = async () => {
         try {
-            const res = await api.get("/sales/all/");
-            const found = res.data.find((s: SaleDetail) => s.id.toString() === id);
-            if (found) {
-                setSale(found);
-                setIncentiveInput(found.incentive_amount || "");
+            const { data, error } = await supabase
+                .from('sales')
+                .select(`
+                    *,
+                    promoter:users!sales_promoter_id_fkey (
+                        email
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                const mappedSale: SaleDetail = {
+                    ...data,
+                    promoter_email: data.promoter?.email || 'Unknown',
+                    bill_image: data.bill_image_url
+                };
+                setSale(mappedSale);
+                setIncentiveInput(data.incentive_amount ? data.incentive_amount.toString() : "");
             } else {
                 Alert.alert("Error", "Sale not found.");
                 router.back();
@@ -58,10 +74,12 @@ export default function SaleDetailScreen() {
 
         setIsProcessing(true);
         try {
-            await api.patch(`/sales/${id}/approve/`, {
-                status: "approved",
-                incentive_amount: parseFloat(incentiveInput)
-            });
+            const { error } = await supabase
+                .from('sales')
+                .update({ status: "approved", incentive_amount: parseFloat(incentiveInput), approved_at: new Date().toISOString() })
+                .eq('id', id);
+
+            if (error) throw error;
             Alert.alert("Success", "Sale has been approved.");
             fetchSaleDetails();
         } catch (error) {
@@ -83,9 +101,12 @@ export default function SaleDetailScreen() {
                     onPress: async () => {
                         setIsProcessing(true);
                         try {
-                            await api.patch(`/sales/${id}/reject/`, {
-                                status: "rejected"
-                            });
+                            const { error } = await supabase
+                                .from('sales')
+                                .update({ status: "rejected" })
+                                .eq('id', id);
+
+                            if (error) throw error;
                             Alert.alert("Success", "Sale has been rejected.");
                             fetchSaleDetails();
                         } catch (error) {
@@ -102,7 +123,12 @@ export default function SaleDetailScreen() {
     const handleMarkPaid = async () => {
         setIsProcessing(true);
         try {
-            await api.patch(`/sales/${id}/mark-paid/`);
+            const { error } = await supabase
+                .from('sales')
+                .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+                .eq('id', id);
+
+            if (error) throw error;
             Alert.alert("Success", "Sale marked as paid.");
             fetchSaleDetails();
         } catch (error) {

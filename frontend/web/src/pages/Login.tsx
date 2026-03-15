@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { supabase } from '../services/supabase';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
@@ -22,14 +22,24 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const res = await api.post('/auth/login/', {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
                 email: email.trim().toLowerCase(),
                 password: password.trim()
             });
-            const { access, refresh, role } = res.data;
 
-            localStorage.setItem('access', access);
-            localStorage.setItem('refresh', refresh);
+            if (authError) throw authError;
+
+            // Fetch user role
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (userError) throw userError;
+
+            const role = userData.role;
+            localStorage.setItem('access', data.session.access_token);
             localStorage.setItem('role', role);
 
             if (role === 'admin') {
@@ -38,7 +48,7 @@ export default function Login() {
                 navigate('/promoter');
             }
         } catch (err: any) {
-            setError(err?.response?.data?.detail || 'Invalid email or password.');
+            setError(err.message || 'Invalid email or password.');
         } finally {
             setLoading(false);
         }
@@ -48,14 +58,28 @@ export default function Login() {
         setGoogleLoading(true);
         setError('');
         try {
-            // credentialResponse.credential contains the id_token that the backend needs
-            const res = await api.post('/auth/google-login/', {
-                id_token: credentialResponse.credential,
+            const { data, error: authError } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: credentialResponse.credential,
             });
 
-            const { access, refresh, role } = res.data;
-            localStorage.setItem('access', access);
-            localStorage.setItem('refresh', refresh);
+            if (authError) throw authError;
+
+            // Fetch user role
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (userError) {
+                // If user doesn't exist in 'users' table, log them out
+                await supabase.auth.signOut();
+                throw new Error('Not Registered. Please contact the admin.');
+            }
+
+            const role = userData.role;
+            localStorage.setItem('access', data.session.access_token);
             localStorage.setItem('role', role);
 
             if (role === 'admin') {
@@ -65,7 +89,7 @@ export default function Login() {
             }
         } catch (err: any) {
             console.error(err);
-            setError(err?.response?.data?.detail || 'Not Registered. You are not registered. Please contact the admin');
+            setError(err.message || 'Google Login Failed');
         } finally {
             setGoogleLoading(false);
         }

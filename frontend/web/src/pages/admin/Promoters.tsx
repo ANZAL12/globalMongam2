@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, ChevronRight, Mail, Phone, CreditCard, Users, Plus } from 'lucide-react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 interface Promoter {
-    id: number;
+    id: string; // Supabase uses UUID string for auth.users
     email: string;
     shop_name: string;
     full_name: string;
     phone_number: string;
     gpay_number: string;
     is_active: boolean;
-    date_joined: string;
+    created_at: string;
 }
 
 export default function AdminPromoters() {
@@ -21,8 +21,14 @@ export default function AdminPromoters() {
 
     const fetchPromoters = async () => {
         try {
-            const response = await api.get('/auth/admin/promoters/');
-            setPromoters(response.data);
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('role', 'promoter')
+                .order('created_at', { ascending: false });
+                
+            if (error) throw error;
+            setPromoters(data as Promoter[] || []);
         } catch (error: any) {
             console.error('Error fetching promoters:', error);
             alert('Failed to fetch promoters list.');
@@ -97,7 +103,7 @@ export default function AdminPromoters() {
 
                             {/* Card Footer */}
                             <div className="mt-[10px] pt-[10px] border-t border-[#f0f0f0] flex justify-end">
-                                <p className="text-[12px] text-[#999]">Joined: {new Date(item.date_joined).toLocaleDateString()}</p>
+                                <p className="text-[12px] text-[#999]">Joined: {new Date(item.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
                     ))

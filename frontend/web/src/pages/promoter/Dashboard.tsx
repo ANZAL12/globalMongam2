@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { supabase } from '../../services/supabase';
 
 type PromoterSale = {
-    id: number;
+    id: string; // UUID
     status: string;
     payment_status: string;
     incentive_amount?: string;
@@ -15,8 +15,16 @@ export default function PromoterDashboard() {
     useEffect(() => {
         const fetchSales = async () => {
             try {
-                const res = await api.get('/sales/my_sales/');
-                setSales(res.data);
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+                
+                const { data, error } = await supabase
+                    .from('sales')
+                    .select('id, status, payment_status, incentive_amount')
+                    .eq('promoter_id', user.id);
+                
+                if (error) throw error;
+                setSales(data || []);
             } catch (error) {
                 console.error('Failed to fetch sales', error);
             } finally {

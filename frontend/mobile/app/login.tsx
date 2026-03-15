@@ -4,7 +4,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import * as AuthSession from "expo-auth-session";
-import api from "../services/api";
+import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -37,15 +37,31 @@ export default function Login() {
 
     const handleGoogleLogin = async (idToken: string) => {
         try {
-            const res = await api.post("/auth/google-login/", {
-                id_token: idToken,
+            const { data, error: authError } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: idToken,
             });
 
-            await login(res.data.access, res.data.refresh, res.data.role);
-        } catch (error) {
+            if (authError) throw authError;
+
+            // Fetch user role
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('role, must_change_password')
+                .eq('id', data.user.id)
+                .single();
+
+            if (userError) {
+                await supabase.auth.signOut();
+                throw new Error('Not Registered. Please contact the admin.');
+            }
+
+            await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
+        } catch (error: any) {
+            console.error(error);
             Alert.alert(
-                "Not Registered",
-                "You are not registered. Please contact the admin"
+                "Login Failed",
+                error.message || "Failed to sign in with Google"
             );
         }
     };
@@ -58,15 +74,26 @@ export default function Login() {
 
         setIsPasswordLoading(true);
         try {
-            const res = await api.post("/auth/login/", {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
                 email: email.trim().toLowerCase(),
                 password: password.trim(),
             });
 
-            await login(res.data.access, res.data.refresh, res.data.role, res.data.must_change_password);
+            if (authError) throw authError;
+
+            // Fetch user role
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('role, must_change_password')
+                .eq('id', data.user.id)
+                .single();
+
+            if (userError) throw userError;
+
+            await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
         } catch (error: any) {
-            const msg = error.response?.data?.error || "Invalid email or password.";
-            Alert.alert(msg === "Account blocked contact admin" ? "Account Disabled" : "Login Failed", msg);
+            const msg = error.message || "Invalid email or password.";
+            Alert.alert(msg === "Invalid login credentials" ? "Login Failed" : "Error", msg);
         } finally {
             setIsPasswordLoading(false);
         }

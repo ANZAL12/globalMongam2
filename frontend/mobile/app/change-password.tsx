@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import { supabase } from "../services/supabase";
 
 export default function ChangePassword() {
     const { updateMustChangePassword } = useAuth();
@@ -27,11 +27,19 @@ export default function ChangePassword() {
 
         setIsLoading(true);
         try {
-            await api.post("/auth/change-password/", { new_password: newPassword });
+            const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+            if (authError) throw authError;
+
+            // Update user table so we know they changed it
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('users').update({ must_change_password: false }).eq('id', user.id);
+            }
+
             Alert.alert("Success", "Password changed successfully! You can now access your account.");
             await updateMustChangePassword(false);
         } catch (error: any) {
-            const msg = error.response?.data?.error || "Failed to change password. Please try again.";
+            const msg = error.message || "Failed to change password. Please try again.";
             Alert.alert("Error", msg);
         } finally {
             setIsLoading(false);
