@@ -25,6 +25,7 @@ export function SaleDetails() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [incentiveAmount, setIncentiveAmount] = useState('');
+  const [transactionId, setTransactionId] = useState('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,7 @@ export function SaleDetails() {
         
         setSale(mappedResult);
         setIncentiveAmount(data.incentive_amount?.toString() || '');
+        setTransactionId(data.transaction_id || '');
       } catch (err) {
         console.error('Error fetching sale details:', err);
       } finally {
@@ -76,6 +78,7 @@ export function SaleDetails() {
         .update({ 
           status: 'approved', 
           incentive_amount: parseFloat(incentiveAmount),
+          transaction_id: transactionId,
           approved_at: new Date().toISOString() 
         })
         .eq('id', id);
@@ -119,6 +122,7 @@ export function SaleDetails() {
         .from('sales')
         .update({ 
           payment_status: 'paid',
+          transaction_id: transactionId || sale?.transaction_id,
           paid_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -319,6 +323,19 @@ export function SaleDetails() {
                        </div>
                     </div>
 
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                          Transaction ID (Optional)
+                       </label>
+                       <input
+                         type="text"
+                         placeholder="TXN12345678"
+                         className="bg-gray-50 border-none w-full px-4 py-3 rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
+                         value={transactionId}
+                         onChange={(e) => setTransactionId(e.target.value)}
+                       />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3 pt-2">
                        <button
                          onClick={handleReject}
@@ -353,6 +370,12 @@ export function SaleDetails() {
                          {sale.status}
                        </span>
                     </div>
+                    {sale.transaction_id && (
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                         <span className="text-sm font-medium text-gray-500">Transaction ID:</span>
+                         <span className="text-sm font-bold text-gray-900">{sale.transaction_id}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 

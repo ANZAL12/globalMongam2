@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../../services/supabase";
 import { useRouter } from "expo-router";
 
 export default function UploadSale() {
@@ -24,7 +24,7 @@ export default function UploadSale() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: 'images',
-            quality: 0.8,
+            quality: 0.5,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -42,7 +42,7 @@ export default function UploadSale() {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: 'images',
-            quality: 0.8,
+            quality: 0.5,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {

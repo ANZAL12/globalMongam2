@@ -11,6 +11,7 @@ export type Sale = {
   payment_status: 'pending' | 'paid' | 'not_applicable';
   created_at: string;
   promoter_email?: string;
+  transaction_id?: string | null;
 };
 
 export type Promoter = {

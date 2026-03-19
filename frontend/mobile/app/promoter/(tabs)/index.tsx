@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../../services/supabase";
 
 type Sale = {
     id: string;

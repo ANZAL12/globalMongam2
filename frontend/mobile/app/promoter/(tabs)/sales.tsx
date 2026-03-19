@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
 
 type Sale = {

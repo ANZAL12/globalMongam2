@@ -17,6 +17,7 @@ type SaleDetail = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    transaction_id: string | null;
 };
 
 export default function SaleDetailScreen() {
@@ -25,6 +26,7 @@ export default function SaleDetailScreen() {
     const [sale, setSale] = useState<SaleDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [incentiveInput, setIncentiveInput] = useState("");
+    const [transactionIdInput, setTransactionIdInput] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [isImageModalVisible, setIsImageModalVisible] = useState(false);
 
@@ -55,6 +57,7 @@ export default function SaleDetailScreen() {
                 };
                 setSale(mappedSale);
                 setIncentiveInput(data.incentive_amount ? data.incentive_amount.toString() : "");
+                setTransactionIdInput(data.transaction_id || "");
             } else {
                 Alert.alert("Error", "Sale not found.");
                 router.back();
@@ -76,7 +79,12 @@ export default function SaleDetailScreen() {
         try {
             const { error } = await supabase
                 .from('sales')
-                .update({ status: "approved", incentive_amount: parseFloat(incentiveInput), approved_at: new Date().toISOString() })
+                .update({ 
+                    status: "approved", 
+                    incentive_amount: parseFloat(incentiveInput), 
+                    transaction_id: transactionIdInput,
+                    approved_at: new Date().toISOString() 
+                })
                 .eq('id', id);
 
             if (error) throw error;
@@ -125,7 +133,11 @@ export default function SaleDetailScreen() {
         try {
             const { error } = await supabase
                 .from('sales')
-                .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+                .update({ 
+                    payment_status: "paid", 
+                    transaction_id: transactionIdInput || sale?.transaction_id,
+                    paid_at: new Date().toISOString() 
+                })
                 .eq('id', id);
 
             if (error) throw error;
@@ -216,6 +228,13 @@ export default function SaleDetailScreen() {
                     </View>
                 )}
 
+                {sale.transaction_id && (
+                    <View style={{ marginTop: 15 }}>
+                        <Text style={styles.label}>Transaction ID</Text>
+                        <Text style={styles.value}>{sale.transaction_id}</Text>
+                    </View>
+                )}
+
                 {isProcessing && <ActivityIndicator style={{ marginTop: 20 }} color="#1976d2" />}
 
                 {!isProcessing && isPending && (
@@ -227,6 +246,13 @@ export default function SaleDetailScreen() {
                             onChangeText={setIncentiveInput}
                             keyboardType="numeric"
                             placeholder="10.00"
+                        />
+                        <Text style={styles.label}>Transaction ID (Optional)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={transactionIdInput}
+                            onChangeText={setTransactionIdInput}
+                            placeholder="TXN12345678"
                         />
                         <View style={styles.buttonRow}>
                             <View style={styles.buttonWrapper}>
@@ -248,6 +274,13 @@ export default function SaleDetailScreen() {
 
                 {!isProcessing && isApprovedUnpaid && (
                     <View style={styles.markPaidContainer}>
+                        <Text style={styles.label}>Transaction ID (Update if needed)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={transactionIdInput}
+                            onChangeText={setTransactionIdInput}
+                            placeholder="TXN12345678"
+                        />
                         <Button title="Mark Incentive as Paid" onPress={handleMarkPaid} color="#9c27b0" />
                     </View>
                 )}

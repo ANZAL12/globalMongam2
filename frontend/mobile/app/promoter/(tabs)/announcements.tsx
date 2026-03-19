@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Image } from "react-native";
-import { supabase } from "../../services/supabase";
-import { useFocusEffect } from "expo-router";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Image, TouchableOpacity } from "react-native";
+import { supabase } from "../../../services/supabase";
+import { useRouter, useFocusEffect } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type Announcement = {
     id: string;
@@ -15,6 +16,7 @@ export default function Announcements() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const router = useRouter();
 
     const fetchAnnouncements = async () => {
         try {
@@ -73,7 +75,11 @@ export default function Announcements() {
                     </View>
                 }
                 renderItem={({ item }) => (
-                    <View style={styles.card}>
+                    <TouchableOpacity 
+                        style={styles.card} 
+                        onPress={() => router.push(`/promoter/details/${item.id}`)}
+                        activeOpacity={0.7}
+                    >
                         <Text style={styles.title}>{item.title}</Text>
                         <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
 
@@ -81,8 +87,13 @@ export default function Announcements() {
                             <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
                         )}
 
-                        <Text style={styles.content}>{item.description}</Text>
-                    </View>
+                        <Text style={styles.content} numberOfLines={3}>{item.description}</Text>
+                        
+                        <View style={styles.readMore}>
+                            <Text style={styles.readMoreText}>Read more</Text>
+                            <MaterialIcons name="keyboard-arrow-right" size={16} color="#1976d2" />
+                        </View>
+                    </TouchableOpacity>
                 )}
             />
         </View>
@@ -140,4 +151,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#888",
     },
+    readMore: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+        justifyContent: 'flex-end',
+    },
+    readMoreText: {
+        color: '#1976d2',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginRight: 4,
+    }
 });
