@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Sale } from '../../types';
 import { logActivity } from '../../utils/logger';
+import { useModal } from '../../context/ModalContext';
 import { 
   ArrowLeft, 
   User, 
@@ -16,7 +17,10 @@ import {
   ExternalLink,
   ChevronRight,
   IndianRupee,
-  ShieldCheck
+  ShieldCheck,
+  Phone,
+  Smartphone,
+  Copy
 } from 'lucide-react';
 
 export function SaleDetails() {
@@ -26,6 +30,7 @@ export function SaleDetails() {
   const [loading, setLoading] = useState(true);
   const [incentiveAmount, setIncentiveAmount] = useState('');
   const [transactionId, setTransactionId] = useState('');
+  const { showAlert, showConfirm } = useModal();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +43,9 @@ export function SaleDetails() {
           .select(`
             *,
             promoter:users!sales_promoter_id_fkey (
-              email
+              email,
+              phone_number,
+              gpay_number
             )
           `)
           .eq('id', id)
@@ -49,6 +56,8 @@ export function SaleDetails() {
         const mappedResult = {
           ...data,
           promoter_email: data.promoter?.email || 'Unknown',
+          promoter_phone: data.promoter?.phone_number || 'N/A',
+          promoter_gpay: data.promoter?.gpay_number || 'N/A',
         };
         
         setSale(mappedResult);
@@ -86,6 +95,11 @@ export function SaleDetails() {
       if (error) throw error;
       await logActivity('Approve Sale', `Approved sale for ${sale?.product_name} (₹${incentiveAmount} incentive)`);
       setSale(prev => prev ? { ...prev, status: 'approved', incentive_amount: incentiveAmount } : null);
+      showAlert({
+        title: 'Sale Approved',
+        message: `Incentive of ₹${incentiveAmount} has been successfully assigned.`,
+        severity: 'success'
+      });
     } catch (err) {
       setError('Failed to approve sale');
       console.error(err);
@@ -95,7 +109,12 @@ export function SaleDetails() {
   };
 
   const handleReject = async () => {
-    if (!window.confirm('Are you sure you want to reject this sale?')) return;
+    const confirmed = await showConfirm({
+      title: 'Reject Sale?',
+      message: 'Are you sure you want to reject this sale? This action cannot be undone.',
+      severity: 'warning'
+    });
+    if (!confirmed) return;
     
     setProcessing(true);
     setError(null);
@@ -108,6 +127,11 @@ export function SaleDetails() {
       if (error) throw error;
       await logActivity('Reject Sale', `Rejected sale for ${sale?.product_name}`);
       setSale(prev => prev ? { ...prev, status: 'rejected' } : null);
+      showAlert({
+        title: 'Sale Rejected',
+        message: 'The sale has been rejected.',
+        severity: 'info'
+      });
     } catch (err) {
       setError('Failed to reject sale');
     } finally {
@@ -130,6 +154,11 @@ export function SaleDetails() {
       if (error) throw error;
       await logActivity('Disburse Incentive', `Marked payment of ₹${sale?.incentive_amount} as paid for ${sale?.product_name}`);
       setSale(prev => prev ? { ...prev, payment_status: 'paid' } : null);
+      showAlert({
+        title: 'Payment Confirmed',
+        message: 'The incentive has been marked as paid.',
+        severity: 'success'
+      });
     } catch (err) {
       setError('Failed to mark as paid');
     } finally {
@@ -209,7 +238,27 @@ export function SaleDetails() {
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-0.5">Submitted By</p>
                         <p className="text-sm font-bold text-gray-900 leading-tight">{sale.promoter_email}</p>
-                        <p className="text-xs text-gray-500 font-medium">Promoter ID: {sale.promoter_id.slice(0, 8)}...</p>
+                        <div className="flex flex-col space-y-1 mt-1">
+                          <div className="flex items-center text-xs text-gray-500 font-medium">
+                            <Phone className="h-3 w-3 mr-1.5 text-gray-400" />
+                            {sale.promoter_phone}
+                          </div>
+                          <div className="flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 w-fit cursor-pointer hover:bg-emerald-100 transition-colors"
+                               onClick={() => {
+                                 if (sale.promoter_gpay) {
+                                   navigator.clipboard.writeText(sale.promoter_gpay);
+                                   showAlert({
+                                     title: 'Copied!',
+                                     message: 'GPay Number copied to clipboard',
+                                     severity: 'success'
+                                   });
+                                 }
+                               }}>
+                            <Smartphone className="h-3 w-3 mr-1.5 text-emerald-500" />
+                            GPay: {sale.promoter_gpay}
+                            <Copy className="h-2.5 w-2.5 ml-2 text-emerald-400" />
+                          </div>
+                        </div>
                       </div>
                    </div>
 

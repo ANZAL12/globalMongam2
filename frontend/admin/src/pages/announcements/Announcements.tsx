@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Announcement, Promoter } from '../../types';
 import { logActivity } from '../../utils/logger';
+import { useModal } from '../../context/ModalContext';
 import { 
   Megaphone, 
   Plus, 
@@ -21,6 +22,7 @@ export function Announcements() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { showAlert, showConfirm } = useModal();
   
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -111,15 +113,29 @@ export function Announcements() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Announcement?',
+      message: 'Are you sure you want to delete this announcement? This action cannot be undone.',
+      severity: 'error'
+    });
+    if (!confirmed) return;
     try {
       const { error } = await supabase.from('announcements').delete().eq('id', id);
       if (error) throw error;
       await logActivity('Delete Announcement', `Deleted announcement: "${announcements.find(a => a.id === id)?.title}"`);
       setAnnouncements(prev => prev.filter(a => a.id !== id));
+      showAlert({
+        title: 'Announcement Deleted',
+        message: 'The announcement has been permanently removed.',
+        severity: 'success'
+      });
     } catch (err) {
       console.error('Delete failed:', err);
-      alert('Failed to delete announcement');
+      showAlert({
+        title: 'Delete Failed',
+        message: 'There was an error deleting the announcement.',
+        severity: 'error'
+      });
     }
   };
 
@@ -162,9 +178,18 @@ export function Announcements() {
       setIsModalOpen(false);
       resetForm();
       fetchAnnouncements();
+      showAlert({
+        title: editingId ? 'Announcement Updated' : 'Announcement Posted',
+        message: editingId ? 'The announcement has been updated successfully.' : 'Your new announcement is now live.',
+        severity: 'success'
+      });
     } catch (err) {
       console.error('Submit failed:', err);
-      alert('Failed to save announcement');
+      showAlert({
+        title: 'Action Failed',
+        message: 'Failed to save the announcement. Please try again.',
+        severity: 'error'
+      });
     } finally {
       setSubmitting(false);
     }

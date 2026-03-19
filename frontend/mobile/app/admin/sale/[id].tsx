@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Button, Alert, TextInput, Modal, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Button, Alert, TextInput, Modal, TouchableOpacity, Clipboard } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "../../../services/supabase";
@@ -18,6 +18,8 @@ type SaleDetail = {
     payment_status: string;
     created_at: string;
     transaction_id: string | null;
+    promoter_phone: string | null;
+    promoter_gpay: string | null;
 };
 
 export default function SaleDetailScreen() {
@@ -41,7 +43,9 @@ export default function SaleDetailScreen() {
                 .select(`
                     *,
                     promoter:users!sales_promoter_id_fkey (
-                        email
+                        email,
+                        phone_number,
+                        gpay_number
                     )
                 `)
                 .eq('id', id)
@@ -53,6 +57,8 @@ export default function SaleDetailScreen() {
                 const mappedSale: SaleDetail = {
                     ...data,
                     promoter_email: data.promoter?.email || 'Unknown',
+                    promoter_phone: data.promoter?.phone_number || 'N/A',
+                    promoter_gpay: data.promoter?.gpay_number || 'N/A',
                     bill_image: data.bill_image_url
                 };
                 setSale(mappedSale);
@@ -171,6 +177,25 @@ export default function SaleDetailScreen() {
             <View style={styles.card}>
                 <Text style={styles.label}>Promoter</Text>
                 <Text style={styles.value}>{sale.promoter_email}</Text>
+                
+                <Text style={styles.label}>Promoter Phone</Text>
+                <Text style={styles.value}>{sale.promoter_phone}</Text>
+
+                <View style={styles.gpayContainer}>
+                    <Text style={[styles.label, { color: '#2e7d32' }]}>GPay Number (Tap to Copy)</Text>
+                    <TouchableOpacity 
+                        style={styles.gpayBadge}
+                        onPress={() => {
+                            if (sale.promoter_gpay && sale.promoter_gpay !== 'N/A') {
+                                // @ts-ignore
+                                Clipboard.setString(sale.promoter_gpay);
+                                alert('GPay Number copied to clipboard');
+                            }
+                        }}
+                    >
+                        <Text style={styles.gpayValue}>{sale.promoter_gpay}</Text>
+                    </TouchableOpacity>
+                </View>
 
                 <Text style={styles.label}>Product Name</Text>
                 <Text style={styles.value}>{sale.product_name}</Text>
@@ -410,5 +435,22 @@ const styles = StyleSheet.create({
     },
     markPaidContainer: {
         marginTop: 20,
-    }
+    },
+    gpayContainer: {
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    gpayBadge: {
+        backgroundColor: '#e8f5e9',
+        padding: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#c8e6c9',
+        marginTop: 5,
+    },
+    gpayValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2e7d32',
+    },
 });

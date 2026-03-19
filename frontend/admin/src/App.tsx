@@ -10,24 +10,28 @@ import { SaleDetails } from './pages/sales/SaleDetails';
 import { Announcements } from './pages/announcements/Announcements';
 import { Logs } from './pages/logs/Logs';
 
+import { ModalProvider } from './context/ModalContext';
+
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        <Route element={<AdminLayout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/promoters" element={<PromotersList />} />
-          <Route path="/promoters/new" element={<AddPromoter />} />
-          <Route path="/promoters/:id" element={<PromoterDetails />} />
-          <Route path="/sales" element={<SalesList />} />
-          <Route path="/sales/:id" element={<SaleDetails />} />
-          <Route path="/announcements" element={<Announcements />} />
-          <Route path="/logs" element={<Logs />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ModalProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route element={<AdminLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/promoters" element={<PromotersList />} />
+            <Route path="/promoters/new" element={<AddPromoter />} />
+            <Route path="/promoters/:id" element={<PromoterDetails />} />
+            <Route path="/sales" element={<SalesList />} />
+            <Route path="/sales/:id" element={<SaleDetails />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/logs" element={<Logs />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ModalProvider>
   );
 }
 

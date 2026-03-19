@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Promoter, Sale } from '../../types';
 import { logActivity } from '../../utils/logger';
+import { useModal } from '../../context/ModalContext';
 import { 
   ArrowLeft, 
   Mail, 
@@ -25,6 +26,7 @@ export function PromoterDetails() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const { showAlert, showConfirm } = useModal();
 
   useEffect(() => {
     async function fetchPromoterData() {
@@ -69,9 +71,13 @@ export function PromoterDetails() {
     const newStatus = !(promoter as any).is_active;
     const action = newStatus ? 'enable' : 'disable';
     
-    if (!window.confirm(`Are you sure you want to ${action} this promoter account?`)) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: `${newStatus ? 'Enable' : 'Disable'} Account?`,
+      message: `Are you sure you want to ${action} this promoter account?`,
+      severity: newStatus ? 'info' : 'warning'
+    });
+    
+    if (!confirmed) return;
 
     setToggling(true);
     try {
@@ -86,9 +92,18 @@ export function PromoterDetails() {
         `${newStatus ? 'Enabled' : 'Disabled'} account for ${promoter.full_name || promoter.email}`
       );
       setPromoter({ ...promoter, is_active: newStatus } as any);
+      showAlert({
+        title: 'Status Updated',
+        message: `The promoter account has been ${newStatus ? 'enabled' : 'disabled'} successfully.`,
+        severity: 'success'
+      });
     } catch (err) {
       console.error('Error toggling status:', err);
-      alert('Failed to update status');
+      showAlert({
+        title: 'Update Failed',
+        message: 'There was an error updating the promoter status.',
+        severity: 'error'
+      });
     } finally {
       setToggling(false);
     }

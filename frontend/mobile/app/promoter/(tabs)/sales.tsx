@@ -14,6 +14,7 @@ type Sale = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    transaction_id?: string | null;
 };
 
 export default function MySales() {
@@ -112,9 +113,16 @@ export default function MySales() {
                             <Text style={styles.dateText}>
                                 {new Date(item.created_at).toLocaleDateString()}
                             </Text>
-                            <Text style={styles.paymentStatus}>
-                                Payment: <Text style={{ fontWeight: "bold" }}>{item.payment_status}</Text>
-                            </Text>
+                            <View style={{ alignItems: "flex-end" }}>
+                                <Text style={styles.paymentStatus}>
+                                    Payment: <Text style={{ fontWeight: "bold" }}>{item.payment_status}</Text>
+                                </Text>
+                                {item.transaction_id && (
+                                    <Text style={styles.txnText}>
+                                        Txn ID: {item.transaction_id}
+                                    </Text>
+                                )}
+                            </View>
                         </View>
                     </View>
                 )}
@@ -200,6 +208,12 @@ const styles = StyleSheet.create({
     paymentStatus: {
         fontSize: 12,
         color: "#555",
+    },
+    txnText: {
+        fontSize: 11,
+        color: "#1976d2",
+        fontWeight: "bold",
+        marginTop: 2,
     },
     emptyContainer: {
         padding: 40,
