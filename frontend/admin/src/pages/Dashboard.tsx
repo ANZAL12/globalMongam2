@@ -6,8 +6,7 @@ import {
   Clock, 
   CheckCircle, 
   CreditCard,
-  ArrowUpRight,
-  ArrowDownRight
+  ArrowUpRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -52,32 +51,24 @@ export function Dashboard() {
       value: sales.length,
       icon: TrendingUp,
       color: 'bg-blue-500',
-      change: '+12.5%',
-      changeType: 'increase',
     },
     {
       name: 'Pending Approval',
       value: sales.filter(s => s.status === 'pending').length,
       icon: Clock,
       color: 'bg-orange-500',
-      change: '-2%',
-      changeType: 'decrease',
     },
     {
       name: 'Total Approved',
       value: sales.filter(s => s.status === 'approved' || s.status === 'paid').length,
       icon: CheckCircle,
       color: 'bg-emerald-500',
-      change: '+18.2%',
-      changeType: 'increase',
     },
     {
       name: 'Incentives Paid',
       value: sales.filter(s => s.payment_status === 'paid').length,
       icon: CreditCard,
       color: 'bg-purple-500',
-      change: '+5.4%',
-      changeType: 'increase',
     },
   ];
 
@@ -110,17 +101,6 @@ export function Dashboard() {
             </dt>
             <dd className="ml-16 flex flex-col items-start">
               <span className="text-3xl font-bold text-gray-900">{item.value}</span>
-              <div className="mt-1 flex items-center">
-                {item.changeType === 'increase' ? (
-                  <ArrowUpRight className="h-4 w-4 text-emerald-500 mr-1" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-rose-500 mr-1" />
-                )}
-                <span className={`text-xs font-semibold ${item.changeType === 'increase' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {item.change}
-                </span>
-                <span className="ml-1 text-xs text-gray-400">vs last month</span>
-              </div>
             </dd>
           </div>
         ))}
