@@ -281,7 +281,7 @@ export default function AdminAnnouncements() {
                     </View>
                 }
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.card} onPress={() => handleEdit(item)} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.card} onPress={() => handleEdit(item)} activeOpacity={0.8} delayPressIn={100}>
                         <View style={styles.cardHeader}>
                             <View style={{ flex: 1, paddingRight: 10 }}>
                                 <Text style={styles.title}>{item.title}</Text>
@@ -314,7 +314,7 @@ export default function AdminAnnouncements() {
                 <MaterialIcons name="add" size={24} color="#fff" />
             </TouchableOpacity>
 
-            <Modal visible={isModalVisible} animationType="slide" presentationStyle="pageSheet">
+            <Modal visible={isModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={resetForm}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>{editingId ? "Edit Announcement" : "New Announcement"}</Text>
                     <TouchableOpacity onPress={resetForm} style={styles.closeBtn}>
@@ -501,7 +501,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        paddingTop: Platform.OS === 'ios' ? 20 : 50,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         backgroundColor: '#fff',

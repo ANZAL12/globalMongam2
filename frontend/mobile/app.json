@@ -17,7 +17,7 @@
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/GLOBAL1.png",
+        "foregroundImage": "./assets/images/GLOBAL2.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -34,7 +34,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/GLOBAL1.png",
-          "imageWidth": 200,
+          "imageWidth": 100,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
