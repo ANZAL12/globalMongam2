@@ -122,7 +122,7 @@ export default function AdminAnnouncements() {
         setContent(announcement.description);
         setImageUri(
             announcement.image_url
-                ? (announcement.image_url.startsWith('http') ? announcement.image_url : `http://10.28.84.177:8000${announcement.image_url}`)
+                ? (announcement.image_url.startsWith('http') ? announcement.image_url : announcement.image_url)
                 : null
         );
         setTargetPromoters(announcement.target_promoters || []);
@@ -197,10 +197,13 @@ export default function AdminAnnouncements() {
                     type: type,
                 } as any);
 
-                formData.append('upload_preset', process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
-                formData.append('cloud_name', process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm');
+                const uploadPreset = (process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default').trim();
+                const cloudName = (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm').trim();
 
-                const response = await fetch(`https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm'}/image/upload`, {
+                formData.append('upload_preset', uploadPreset);
+                formData.append('cloud_name', cloudName);
+
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -299,7 +302,7 @@ export default function AdminAnnouncements() {
 
                         {item.image_url && (
                             <Image
-                                source={{ uri: item.image_url.startsWith('http') ? item.image_url : `http://10.28.84.177:8000${item.image_url}` }}
+                                source={{ uri: item.image_url.startsWith('http') ? item.image_url : item.image_url }}
                                 style={styles.image}
                                 resizeMode="cover"
                             />

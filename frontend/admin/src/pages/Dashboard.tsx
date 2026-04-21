@@ -51,24 +51,28 @@ export function Dashboard() {
       value: sales.length,
       icon: TrendingUp,
       color: 'bg-blue-500',
+      link: '/sales'
     },
     {
       name: 'Pending Approval',
       value: sales.filter(s => s.status === 'pending').length,
       icon: Clock,
       color: 'bg-orange-500',
+      link: '/sales?status=pending'
     },
     {
       name: 'Total Approved',
       value: sales.filter(s => s.status === 'approved' || s.status === 'paid').length,
       icon: CheckCircle,
       color: 'bg-emerald-500',
+      link: '/sales?status=approved'
     },
     {
       name: 'Incentives Paid',
       value: sales.filter(s => s.payment_status === 'paid').length,
       icon: CreditCard,
       color: 'bg-purple-500',
+      link: '/sales?status=paid'
     },
   ];
 
@@ -89,9 +93,10 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
-          <div
+          <Link
+            to={item.link}
             key={item.name}
-            className="relative bg-white pt-6 px-6 pb-6 shadow-sm border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group"
+            className="block relative bg-white pt-6 px-6 pb-6 shadow-sm border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group"
           >
             <dt>
               <div className={`absolute rounded-xl p-3 ${item.color} text-white shadow-lg shadow-indigo-100 transition-transform group-hover:scale-110`}>
@@ -99,10 +104,10 @@ export function Dashboard() {
               </div>
               <p className="ml-16 text-sm font-medium text-gray-500 truncate">{item.name}</p>
             </dt>
-            <dd className="ml-16 flex flex-col items-start">
+            <dd className="ml-16 flex flex-col items-start mt-2">
               <span className="text-3xl font-bold text-gray-900">{item.value}</span>
             </dd>
-          </div>
+          </Link>
         ))}
       </div>
 

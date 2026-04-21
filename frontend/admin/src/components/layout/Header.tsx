@@ -11,8 +11,11 @@ export function Header({ userEmail }: HeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
+    const isConfirmed = window.confirm("Are you sure you want to log out?");
+    if (isConfirmed) {
+      await supabase.auth.signOut();
+      navigate('/login');
+    }
   };
 
   return (

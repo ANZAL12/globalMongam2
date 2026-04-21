@@ -10,7 +10,7 @@
         "preview": {
             "distribution": "internal",
             "env": {
-                "EXPO_PUBLIC_API_URL": "http://10.28.84.177:8000/api"
+                "EXPO_PUBLIC_API_URL": "https://your-preview-api.com/api"
             }
         },
         "production": {

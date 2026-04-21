@@ -169,7 +169,8 @@ export default function SaleDetailScreen() {
 
     // Support image URLs lacking the absolute server path if requested locally
     const getImageUrl = (url: string) => {
-        return url.startsWith('http') ? url : `http://10.28.84.177:8000${url}`;
+        if (!url) return "";
+        return url.startsWith('http') ? url : url;
     };
 
     return (

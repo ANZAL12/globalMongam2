@@ -151,24 +151,19 @@ export default function AdminAnnouncements() {
             let uploadedImageUrl = imagePreview && imagePreview.startsWith('http') ? imagePreview : null;
 
             if (imageFile) {
-                const fileExt = imageFile.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `${fileName}`;
-                
-                // Assuming 'announcements' storage bucket exists
-                const { error: uploadError } = await supabase.storage
-                    .from('announcements')
-                    .upload(filePath, imageFile);
-                
-                if (uploadError) {
-                    // Try to proceed without image if bucket doesn't exist, though typically we'd catch and throw
-                    console.error('Image upload failed, is the storage bucket created?', uploadError);
-                } else {
-                    const { data: publicUrlData } = supabase.storage
-                        .from('announcements')
-                        .getPublicUrl(filePath);
-                    uploadedImageUrl = publicUrlData.publicUrl;
-                }
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
+                formData.append('cloud_name', import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm');
+
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm'}/image/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const uploadData = await response.json();
+                if (uploadData.error) throw new Error(uploadData.error.message);
+                uploadedImageUrl = uploadData.secure_url;
             }
 
             let announcementId = editingId;

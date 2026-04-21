@@ -61,6 +61,20 @@ export default function PromoterUploadSale() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
+            // Verify account is not blocked
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('is_active')
+                .eq('id', user.id)
+                .single();
+
+            if (userError) throw new Error("Failed to verify account status.");
+            if (userData && userData.is_active === false) {
+                alert("Action Blocked: Your account is blocked. Please contact the admin.");
+                setIsSubmitting(false);
+                return;
+            }
+
             // Upload to Cloudinary
             const formData = new FormData();
             formData.append('file', imageFile);
@@ -75,7 +89,7 @@ export default function PromoterUploadSale() {
             const uploadData = await response.json();
             if (uploadData.error) throw new Error(uploadData.error.message);
 
-            uploadedImageUrl = uploadData.secure_url;
+            const uploadedImageUrl = uploadData.secure_url;
 
             // Insert into Database
             const { error: insertError } = await supabase.from('sales').insert([{

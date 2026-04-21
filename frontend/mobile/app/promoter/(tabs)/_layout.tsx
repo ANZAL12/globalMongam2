@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../../context/AuthContext";
-import { TouchableOpacity, View, Image } from "react-native";
+import { TouchableOpacity, View, Image, Alert } from "react-native";
 
 export default function PromoterTabLayout() {
     const { logout } = useAuth();
@@ -20,7 +20,17 @@ export default function PromoterTabLayout() {
                 ),
                 headerTitle: "",
                 headerRight: () => (
-                    <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
+                    <TouchableOpacity 
+                        onPress={() => Alert.alert(
+                            "Logout", 
+                            "Are you sure you want to logout?",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Logout", onPress: logout, style: "destructive" }
+                            ]
+                        )} 
+                        style={{ marginRight: 15 }}
+                    >
                         <MaterialIcons name="logout" size={24} color="#f00" />
                     </TouchableOpacity>
                 ),

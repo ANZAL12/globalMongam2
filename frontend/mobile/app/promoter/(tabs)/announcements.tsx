@@ -16,12 +16,30 @@ export default function Announcements() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
     const router = useRouter();
 
     const fetchAnnouncements = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
+
+            // Check if promoter is active
+            const { data: userData } = await supabase
+                .from('users')
+                .select('is_active')
+                .eq('id', user.id)
+                .single();
+
+            if (userData && userData.is_active === false) {
+                setIsBlocked(true);
+                setAnnouncements([]);
+                setLoading(false);
+                setRefreshing(false);
+                return;
+            } else {
+                setIsBlocked(false);
+            }
 
             const { data, error } = await supabase
                 .from('announcements')
@@ -59,6 +77,20 @@ export default function Announcements() {
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" color="#1976d2" />
+            </View>
+        );
+    }
+
+    if (isBlocked) {
+        return (
+            <View style={[styles.center, { padding: 20 }]}>
+                <MaterialIcons name="block" size={64} color="#d32f2f" style={{ marginBottom: 16 }} />
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#d32f2f', marginBottom: 8, textAlign: 'center' }}>
+                    Access Blocked
+                </Text>
+                <Text style={{ fontSize: 16, color: '#555', textAlign: 'center' }}>
+                    Your account has been blocked. You can no longer view announcements. Please contact the administrator for more information.
+                </Text>
             </View>
         );
     }

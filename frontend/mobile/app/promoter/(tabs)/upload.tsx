@@ -61,6 +61,20 @@ export default function UploadSale() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("User session not found.");
 
+            // Verify account is not blocked
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('is_active')
+                .eq('id', user.id)
+                .single();
+
+            if (userError) throw new Error("Failed to verify account status.");
+            if (userData && userData.is_active === false) {
+                Alert.alert("Action Blocked", "Your account is blocked. Please contact the admin.");
+                setIsSubmitting(false);
+                return;
+            }
+
             let bill_image_url = "";
 
             if (imageUri) {
@@ -80,10 +94,13 @@ export default function UploadSale() {
                     type: type,
                 } as any);
                 
-                formData.append('upload_preset', process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
-                formData.append('cloud_name', process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm');
+                const uploadPreset = (process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default').trim();
+                const cloudName = (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm').trim();
 
-                const response = await fetch(`https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm'}/image/upload`, {
+                formData.append('upload_preset', uploadPreset);
+                formData.append('cloud_name', cloudName);
+
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                     method: 'POST',
                     body: formData,
                 });

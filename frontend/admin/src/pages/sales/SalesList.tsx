@@ -12,14 +12,28 @@ import {
   XCircle,
   Clock
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export function SalesList() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  const initialStatus = searchParams.get('status') || 'all';
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const navigate = useNavigate();
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    setStatusFilter(newStatus);
+    if (newStatus === 'all') {
+      searchParams.delete('status');
+    } else {
+      searchParams.set('status', newStatus);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
 
   useEffect(() => {
     async function fetchSales() {
@@ -96,7 +110,7 @@ export function SalesList() {
             <select
               className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={handleStatusChange}
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
