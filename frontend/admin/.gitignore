@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Electron builds
+dist_electron
+dist_final
+dist_latest
+dist_unpacked
+
+# Icon generation
+icon.ico
+admin_icon.png*
+generate_icon*
+temp_icon.png

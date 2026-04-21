@@ -6,7 +6,6 @@ import {
   ShoppingBag, 
   Calendar, 
   User, 
-  ArrowUpRight,
   Filter,
   CheckCircle2,
   XCircle,
