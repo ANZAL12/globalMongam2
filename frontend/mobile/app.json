@@ -14,7 +14,6 @@
     },
     "android": {
       "package": "com.globalagencies.mobile",
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/GLOBAL2_padded.png",

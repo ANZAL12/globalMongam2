@@ -1,0 +1,14 @@
+# Ignore dependencies
+node_modules/
+
+# Ignore local env files
+.env
+.env*.local
+
+# Ignore build outputs
+dist/
+web-build/
+.expo/
+
+# Ignore logs
+*.log

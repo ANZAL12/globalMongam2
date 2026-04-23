@@ -141,34 +141,41 @@ export function Announcements() {
 
   const sendPushNotifications = async (title: string, body: string) => {
     try {
-      // 1. Fetch all active promoters with a push token
+      console.log('Push: Fetching tokens for promoters...');
       const { data: targetUsers, error } = await supabase
         .from('users')
         .select('expo_push_token')
         .eq('role', 'promoter')
         .not('expo_push_token', 'is', null);
 
-      if (error) throw error;
-      if (!targetUsers || targetUsers.length === 0) return;
+      if (error) {
+        console.error('Push: Database error:', error);
+        return;
+      }
+      
+      console.log(`Push: Found ${targetUsers?.length || 0} potential users.`);
 
       const tokens = targetUsers
-        .map(u => u.expo_push_token)
+        ?.map(u => u.expo_push_token)
         .filter(t => t && t.startsWith('ExponentPushToken'));
 
-      if (tokens.length === 0) return;
+      if (!tokens || tokens.length === 0) {
+        console.warn('Push: No valid ExponentPushTokens found. Make sure promoters have opened the new app.');
+        return;
+      }
 
-      // 2. Prepare Expo messages
+      console.log(`Push: Sending to ${tokens.length} valid tokens...`);
+
       const messages = tokens.map(token => ({
         to: token,
         sound: 'default',
         title: title,
         body: body,
+        priority: 'high',
+        channelId: 'default',
         data: { type: 'announcement' },
       }));
 
-      // 3. Send to Expo Push API
-      // Note: In production, this should ideally be done via a backend to handle batching/retries
-      // but we call it directly here as per project requirements.
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: {
@@ -180,9 +187,9 @@ export function Announcements() {
       });
 
       const result = await response.json();
-      console.log('Push notifications sent:', result);
+      console.log('Push: Expo API response:', result);
     } catch (err) {
-      console.error('Failed to send push notifications:', err);
+      console.error('Push: Critical error:', err);
     }
   };
 
@@ -220,13 +227,10 @@ export function Announcements() {
         await logActivity('Create Announcement', `Posted new announcement: "${title}"`);
       }
 
-      // Handle targets if needed (omitting for brevity in this MVP logic but UI handles selection)
-      
       setIsModalOpen(false);
       resetForm();
       fetchAnnouncements();
 
-      // Send Push Notifications for new announcements
       if (!editingId) {
         sendPushNotifications(title, description.substring(0, 100) + (description.length > 100 ? '...' : ''));
       }

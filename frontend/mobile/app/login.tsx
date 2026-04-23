@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
+import { syncPushTokenToBackend } from "../services/notifications";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,6 +58,7 @@ export default function Login() {
             }
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
+            syncPushTokenToBackend();
         } catch (error: any) {
             console.error(error);
             Alert.alert(
@@ -91,6 +93,7 @@ export default function Login() {
             if (userError) throw userError;
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
+            syncPushTokenToBackend();
         } catch (error: any) {
             const msg = error.message || "Invalid email or password.";
             Alert.alert(msg === "Invalid login credentials" ? "Login Failed" : "Error", msg);
