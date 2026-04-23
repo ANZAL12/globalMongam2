@@ -57,31 +57,34 @@ export async function registerForPushNotificationsAsync() {
     }
 
     if (Device.isDevice) {
+        console.log('Push: Checking device permissions...');
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
         if (existingStatus !== 'granted') {
+            console.log('Push: Requesting new permissions...');
             const { status } = await Notifications.requestPermissionsAsync();
             finalStatus = status;
         }
         if (finalStatus !== 'granted') {
-            // Silently fail or log, as the user might have denied it intentionally
-            console.log('Push notification permission not granted');
+            console.warn('Push: Permission DENIED by user!');
             return null;
         }
 
         try {
-            const projectId =
-                Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+            const projId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "ec0dc904-cf1d-4073-b1f3-14c658b50ec8";
+            console.log('Push: Using Project ID:', projId);
 
             const pushTokenString = (await Notifications.getExpoPushTokenAsync({
-                projectId: projectId || "ec0dc904-cf1d-4073-b1f3-14c658b50ec8", 
+                projectId: projId, 
             })).data;
+            
+            console.log('Push: SUCCESS! Token is:', pushTokenString);
             token = pushTokenString;
         } catch (e: any) {
-            console.log("Error getting push token:", e);
+            console.error('Push: EXPO ERROR during token fetch:', e.message || e);
         }
     } else {
-        console.log('Must use physical device for Push Notifications');
+        console.warn('Push: SKIPPED (Not a physical device)');
     }
 
     return token;

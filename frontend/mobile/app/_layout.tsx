@@ -4,15 +4,44 @@ import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
+import { supabase } from "../services/supabase";
+import * as Notifications from 'expo-notifications';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
+  // Re-sync whenever the user logs in or out
   useEffect(() => {
-    requestAllPermissions();
-    syncPushTokenToBackend();
+    const checkUserAndSync = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log('Root: User detected, syncing push token...');
+        await requestAllPermissions();
+        await syncPushTokenToBackend();
+      }
+    };
+    
+    checkUserAndSync();
+
+    // Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        syncPushTokenToBackend();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Listener for notifications received while the app is foregrounded
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('🔔 Notification Received in Foreground:', notification);
+    });
+
+    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
