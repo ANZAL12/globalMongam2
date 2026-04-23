@@ -139,6 +139,53 @@ export function Announcements() {
     }
   };
 
+  const sendPushNotifications = async (title: string, body: string) => {
+    try {
+      // 1. Fetch all active promoters with a push token
+      const { data: targetUsers, error } = await supabase
+        .from('users')
+        .select('expo_push_token')
+        .eq('role', 'promoter')
+        .not('expo_push_token', 'is', null);
+
+      if (error) throw error;
+      if (!targetUsers || targetUsers.length === 0) return;
+
+      const tokens = targetUsers
+        .map(u => u.expo_push_token)
+        .filter(t => t && t.startsWith('ExponentPushToken'));
+
+      if (tokens.length === 0) return;
+
+      // 2. Prepare Expo messages
+      const messages = tokens.map(token => ({
+        to: token,
+        sound: 'default',
+        title: title,
+        body: body,
+        data: { type: 'announcement' },
+      }));
+
+      // 3. Send to Expo Push API
+      // Note: In production, this should ideally be done via a backend to handle batching/retries
+      // but we call it directly here as per project requirements.
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messages),
+      });
+
+      const result = await response.json();
+      console.log('Push notifications sent:', result);
+    } catch (err) {
+      console.error('Failed to send push notifications:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) return;
@@ -178,6 +225,12 @@ export function Announcements() {
       setIsModalOpen(false);
       resetForm();
       fetchAnnouncements();
+
+      // Send Push Notifications for new announcements
+      if (!editingId) {
+        sendPushNotifications(title, description.substring(0, 100) + (description.length > 100 ? '...' : ''));
+      }
+
       showAlert({
         title: editingId ? 'Announcement Updated' : 'Announcement Posted',
         message: editingId ? 'The announcement has been updated successfully.' : 'Your new announcement is now live.',

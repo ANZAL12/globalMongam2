@@ -62,6 +62,32 @@ export default function Announcements() {
         }
     };
 
+    useEffect(() => {
+        const channel = supabase
+            .channel('realtime_announcements')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'announcement_targets',
+                },
+                (payload) => {
+                    // Check if the new target is for the current user
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user && payload.new.user_id === user.id) {
+                            fetchAnnouncements();
+                        }
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
             fetchAnnouncements();

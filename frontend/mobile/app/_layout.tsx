@@ -3,11 +3,17 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    requestAllPermissions();
+    syncPushTokenToBackend();
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
