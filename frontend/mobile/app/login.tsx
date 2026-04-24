@@ -20,9 +20,9 @@ export default function Login() {
     const redirectUri = AuthSession.makeRedirectUri();
 
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        // For Expo Go / Web
+        // The Web Client ID is used as the primary clientId for many Expo flows
+        clientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
         webClientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
-        // For Standalone APK (Paste the Android Client ID from Google Console here)
         androidClientId: "612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh.apps.googleusercontent.com",
     });
 
