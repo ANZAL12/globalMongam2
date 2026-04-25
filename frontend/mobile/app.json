@@ -5,7 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/GLOBAL2.png",
-    "scheme": "global-agencies",
+    "scheme": [
+      "global-agencies",
+      "com.googleusercontent.apps.612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh",
+      "com.googleusercontent.apps.612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

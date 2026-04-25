@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
@@ -17,15 +17,21 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
-    const redirectUri = AuthSession.makeRedirectUri();
+    const redirectUri = Platform.select({
+        android: "com.googleusercontent.apps.612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh:/oauth2redirect",
+        ios: "com.googleusercontent.apps.612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf:/oauth2redirect",
+        default: AuthSession.makeRedirectUri({
+            scheme: "global-agencies",
+            path: "oauth2redirect",
+        }),
+    });
 
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
         webClientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
         androidClientId: "612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh.apps.googleusercontent.com",
         iosClientId: "612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf.apps.googleusercontent.com",
-    }, {
-        scheme: "global-agencies",
+        redirectUri,
     });
 
     useEffect(() => {

@@ -5,12 +5,14 @@ import {
   Users, 
   ShoppingBag, 
   Megaphone, 
-  FileText 
+  FileText,
+  UserCog
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Promoters', href: '/promoters', icon: Users },
+  { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog },
   { name: 'Sales', href: '/sales', icon: ShoppingBag },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
   { name: 'Logs', href: '/logs', icon: FileText },

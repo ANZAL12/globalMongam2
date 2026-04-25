@@ -22,6 +22,8 @@ export type Promoter = {
   full_name: string | null;
   phone_number: string | null;
   gpay_number: string | null;
+  shop_name: string | null;
+  upi_id?: string | null;
   created_at: string;
   role: 'promoter' | 'admin';
 };
