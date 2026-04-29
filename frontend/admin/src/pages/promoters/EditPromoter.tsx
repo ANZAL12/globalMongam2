@@ -12,7 +12,7 @@ import {
   AlertCircle,
   Save
 } from 'lucide-react';
-import type { Promoter } from '../../types';
+
 
 export function EditPromoter() {
   const { id } = useParams();

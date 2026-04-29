@@ -7,11 +7,8 @@ import {
   Search,
   Mail,
   Phone,
-  Store,
   CreditCard,
   Edit,
-  CheckCircle2,
-  XCircle,
   Building2
 } from 'lucide-react';
 

@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Phone,
   Smartphone,
-  Copy
+  Copy,
+  QrCode
 } from 'lucide-react';
 
 export function SaleDetails() {
@@ -452,11 +453,11 @@ export function SaleDetails() {
                   <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 space-y-4">
                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Scan to Pay via UPI</p>
                     
-                    {((sale as any).promoter_upi || (sale as any).promoter_phone) ? (
+                    {((sale as any).promoter_upi) ? (
                       <div className="flex flex-col items-center space-y-3">
                         <div className="bg-white p-3 rounded-2xl shadow-sm border border-indigo-50">
                           {(() => {
-                            const upiAddr = (sale as any).promoter_upi ? (sale as any).promoter_upi : `${(sale as any).promoter_phone}@okbizaxis`;
+                            const upiAddr = (sale as any).promoter_upi;
                             const amt = parseFloat(incentiveAmount || sale.incentive_amount || '0').toFixed(2);
                             const payeeName = ((sale as any).promoter_name || 'Promoter').substring(0, 20); // GPay limit
                             const upiUrl = `upi://pay?pa=${upiAddr}&pn=${encodeURIComponent(payeeName)}&am=${amt}&cu=INR`;
@@ -471,14 +472,24 @@ export function SaleDetails() {
                           })()}
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-indigo-900">{(sale as any).promoter_upi || `${(sale as any).promoter_phone}@okbizaxis`}</p>
+                          <p className="text-xs font-bold text-indigo-900">{(sale as any).promoter_upi}</p>
                           <p className="text-[10px] text-indigo-500 font-medium">Amount: ₹{parseFloat(incentiveAmount || sale.incentive_amount || '0').toFixed(2)}</p>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-4">
-                        <p className="text-xs text-amber-600 font-bold">Payment Details Missing</p>
-                        <p className="text-[10px] text-amber-500 mt-1">Please ensure promoter has a UPI ID or Phone Number</p>
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-rose-100 flex flex-col items-center justify-center w-48 h-48">
+                          <div className="relative mb-3">
+                            <QrCode className="h-12 w-12 text-gray-300 opacity-60" />
+                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                              <XCircle className="h-5 w-5 text-rose-500" />
+                            </div>
+                          </div>
+                          <div className="text-center">
+                             <p className="text-xs font-bold text-rose-600 mb-1 leading-tight">QR Cannot Be Created</p>
+                             <p className="text-[10px] text-gray-500 font-medium leading-tight">UPI ID is missing.</p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

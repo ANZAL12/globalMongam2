@@ -34,3 +34,6 @@ icon.ico
 admin_icon.png*
 generate_icon*
 temp_icon.png
+
+# Build artifacts
+*.zip
