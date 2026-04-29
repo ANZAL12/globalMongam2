@@ -11,6 +11,7 @@ export default function AddPromoter() {
     const [phoneNumber, setPhoneNumber] = useState("");
     const [gPayNumber, setGPayNumber] = useState("");
     const [password, setPassword] = useState("");
+    const [upiId, setUpiId] = useState("");
     const [loading, setLoading] = useState(false);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
     const router = useRouter();
