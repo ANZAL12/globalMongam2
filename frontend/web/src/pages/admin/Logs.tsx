@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Activity } from 'lucide-react';
+import { supabase } from '../../services/supabase';
 
 interface LogEntry {
     id: number;
@@ -20,10 +22,19 @@ export default function Logs() {
     }, []);
 
     const fetchLogs = async () => {
-        setLoading(false);
-        // Supabase does not have a native admin log equivalent out-of-the-box like Django.
-        // It requires custom postgres triggers or viewing the Supabase Dashboard.
-        setLogs([]);
+        try {
+            const { data, error } = await supabase
+                .from('logs')
+                .select('*')
+                .order('action_time', { ascending: false });
+
+            if (error) throw error;
+            setLogs(data || []);
+        } catch (error) {
+            console.error('Failed to fetch logs', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const getActionType = (flag: number) => {
@@ -38,36 +49,48 @@ export default function Logs() {
     if (loading) return <div>Loading logs...</div>;
 
     return (
-        <div className="p-4">
-            <h1 className="text-2xl flex font-bold mb-4">Admin Activity Logs</h1>
-            <div className="overflow-x-auto">
-                <table className="w-full bg-white shadow-md rounded border">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="p-3 text-left">Time</th>
-                            <th className="p-3 text-left">Admin Email / UID</th>
-                            <th className="p-3 text-left">Action Type</th>
-                            <th className="p-3 text-left">Object</th>
-                            <th className="p-3 text-left">Message</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {logs.map(log => (
-                            <tr key={log.id} className="border-b hover:bg-gray-50">
-                                <td className="p-3">{new Date(log.action_time).toLocaleString()}</td>
-                                <td className="p-3 font-semibold">{log.username}</td>
-                                <td className="p-3">{getActionType(log.action_flag)}</td>
-                                <td className="p-3">{log.object_repr}</td>
-                                <td className="p-3">{log.change_message || 'N/A'}</td>
-                            </tr>
-                        ))}
-                        {logs.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="p-4 text-center text-gray-500">No activity logs found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+        <div className="flex-1 bg-[#f5f5f5]">
+            <div className="p-4 border-b bg-white">
+                <h1 className="text-[20px] font-bold text-[#333]">Activity Logs</h1>
+            </div>
+
+            <div className="p-3 flex flex-col gap-3">
+                {logs.length === 0 ? (
+                    <div className="bg-white rounded-[12px] p-8 text-center shadow-sm border border-gray-100">
+                        <div className="text-gray-400 mb-2">
+                            <Activity size={40} className="mx-auto opacity-20" />
+                        </div>
+                        <p className="text-gray-500 font-medium">No activity logs found.</p>
+                        <p className="text-xs text-gray-400 mt-1">Admin actions will appear here.</p>
+                    </div>
+                ) : (
+                    logs.map(log => (
+                        <div key={log.id} className="bg-white rounded-[12px] p-4 shadow-sm border border-gray-100 flex flex-col gap-2">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                    <span className="text-[14px] font-bold text-[#333] truncate max-w-[200px]">
+                                        {log.username}
+                                    </span>
+                                    <span className="text-[11px] text-[#8e8e93]">
+                                        {new Date(log.action_time).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="text-[12px]">
+                                    {getActionType(log.action_flag)}
+                                </div>
+                            </div>
+
+                            <div className="bg-[#f9f9f9] rounded-[8px] p-2 mt-1">
+                                <div className="text-[12px] font-semibold text-[#555] mb-1">
+                                    {log.object_repr}
+                                </div>
+                                <div className="text-[13px] text-[#666] leading-relaxed">
+                                    {log.change_message || 'No details provided'}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, User, Mail, Phone, CreditCard, Calendar, History } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Mail, Phone, CreditCard, Calendar, History, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { logAdminAction, ActionFlag } from '../../services/logger';
 
 interface Sale {
     id: string; // UUID from supabase
@@ -30,6 +31,7 @@ export default function AdminPromoterDetail() {
     const navigate = useNavigate();
     const [promoter, setPromoter] = useState<PromoterDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isStatusLoading, setIsStatusLoading] = useState(false);
 
     const fetchPromoterDetail = async () => {
         try {
@@ -60,6 +62,39 @@ export default function AdminPromoterDetail() {
             alert('Failed to load promoter details.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleActiveStatus = async () => {
+        if (!promoter) return;
+        const newStatus = !promoter.is_active;
+        const actionText = newStatus ? 'enable' : 'disable';
+
+        if (!window.confirm(`Are you sure you want to ${actionText} this promoter?`)) return;
+
+        setIsStatusLoading(true);
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ is_active: newStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Log the action
+            await logAdminAction(
+                ActionFlag.CHANGE,
+                `Promoter: ${promoter.full_name}`,
+                `${newStatus ? 'Enabled' : 'Disabled'} promoter account (${promoter.email})`
+            );
+
+            alert(`Promoter has been ${newStatus ? 'enabled' : 'disabled'}.`);
+            fetchPromoterDetail();
+        } catch (error: any) {
+            console.error('Error toggling status:', error);
+            alert(`Failed to ${actionText} promoter.`);
+        } finally {
+            setIsStatusLoading(false);
         }
     };
 
@@ -123,7 +158,28 @@ export default function AdminPromoterDetail() {
                             <Calendar size={20} className="text-[#666]" />
                             <p className="ml-[12px] text-[15px] text-[#444]">Joined: {new Date(promoter.created_at).toLocaleDateString()}</p>
                         </div>
+                        <div className="flex flex-row items-center mb-[12px]">
+                            {promoter.is_active ? (
+                                <ShieldCheck size={20} className="text-green-600" />
+                            ) : (
+                                <ShieldAlert size={20} className="text-red-600" />
+                            )}
+                            <p className={`ml-[12px] text-[15px] font-bold ${promoter.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                                {promoter.is_active ? 'Account Active' : 'Account Disabled'}
+                            </p>
+                        </div>
                     </div>
+
+                    <button
+                        onClick={toggleActiveStatus}
+                        disabled={isStatusLoading}
+                        className={`mt-[10px] w-full py-[12px] rounded-[10px] font-bold text-white transition-all shadow-sm ${promoter.is_active
+                                ? 'bg-red-500 hover:bg-red-600 active:bg-red-700'
+                                : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
+                            } ${isStatusLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        {isStatusLoading ? 'Processing...' : promoter.is_active ? 'Disable Promoter' : 'Enable Promoter'}
+                    </button>
                 </div>
 
                 <h3 className="text-[18px] font-bold text-[#333] mb-[15px]">Incentives & Rewards History</h3>

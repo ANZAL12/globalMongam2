@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, X, ZoomIn } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { logAdminAction, ActionFlag } from '../../services/logger';
 
 type SaleDetail = {
     id: string; // UUID in supabase
@@ -75,6 +76,14 @@ export default function AdminSaleDetail() {
                 .eq('id', id);
 
             if (error) throw error;
+            
+            // Log the action
+            await logAdminAction(
+                ActionFlag.CHANGE, 
+                `Sale #${id?.substring(0, 8)}`, 
+                `Approved with incentive: ₹${incentiveInput}`
+            );
+
             alert('Sale has been approved.');
             fetchSaleDetails();
         } catch (error) {
@@ -95,6 +104,14 @@ export default function AdminSaleDetail() {
                     .eq('id', id);
 
                 if (error) throw error;
+
+                // Log the action
+                await logAdminAction(
+                    ActionFlag.CHANGE, 
+                    `Sale #${id?.substring(0, 8)}`, 
+                    `Rejected sale`
+                );
+
                 alert('Sale has been rejected.');
                 fetchSaleDetails();
             } catch (error) {
@@ -115,6 +132,14 @@ export default function AdminSaleDetail() {
                 .eq('id', id);
 
             if (error) throw error;
+
+            // Log the action
+            await logAdminAction(
+                ActionFlag.CHANGE, 
+                `Sale #${id?.substring(0, 8)}`, 
+                `Marked incentive as paid`
+            );
+
             alert('Sale marked as paid.');
             fetchSaleDetails();
         } catch (error) {

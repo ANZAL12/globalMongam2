@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { logAdminAction, ActionFlag } from '../../services/logger';
 
 export default function AdminAddPromoter() {
     const navigate = useNavigate();
@@ -54,6 +55,13 @@ export default function AdminAddPromoter() {
                 }]);
 
                 if (dbError) throw dbError;
+
+                // Log the action
+                await logAdminAction(
+                    ActionFlag.ADDITION,
+                    `Promoter: ${formData.full_name}`,
+                    `Created account for ${formData.email} (${formData.shop_name})`
+                );
             }
 
             navigate('/admin/promoters');

@@ -59,13 +59,18 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role, must_change_password')
+                .select('role, must_change_password, is_active')
                 .eq('id', data.user.id)
                 .single();
 
             if (userError) {
                 await supabase.auth.signOut();
                 throw new Error('Not Registered. Please contact the admin.');
+            }
+
+            if (!userData.is_active) {
+                await supabase.auth.signOut();
+                throw new Error('Your account has been disabled. Please contact the admin.');
             }
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
@@ -97,11 +102,16 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role, must_change_password')
+                .select('role, must_change_password, is_active')
                 .eq('id', data.user.id)
                 .single();
 
             if (userError) throw userError;
+
+            if (!userData.is_active) {
+                await supabase.auth.signOut();
+                throw new Error('Your account has been disabled. Please contact the admin.');
+            }
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
             syncPushTokenToBackend();

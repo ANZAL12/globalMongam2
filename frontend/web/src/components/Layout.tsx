@@ -37,8 +37,10 @@ export default function Layout() {
             <div className="w-full max-w-md bg-[#f5f5f5] h-full flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
 
                 {/* Mobile Header matching `headerShown: true` from expo-router */}
-                <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
-                    <img src="/logo.png" alt="Global Agencies Logo" className="h-10 object-contain" />
+                <header className="flex items-center justify-between px-4 h-20 bg-white border-b border-gray-200 shadow-sm">
+                    <div className="relative h-20 w-48 overflow-hidden">
+                        <img src="/logo.png" alt="Global Agencies Logo" className="absolute left-[0px] top-[65%] -translate-y-1/2 h-20 scale-[2.2] object-contain origin-left" />
+                    </div>
                     <button onClick={onLogout} className="p-2">
                         <LogOut size={24} color="#f00" />
                     </button>

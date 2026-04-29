@@ -32,11 +32,16 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role')
+                .select('role, is_active')
                 .eq('id', data.user.id)
                 .single();
 
             if (userError) throw userError;
+
+            if (!userData.is_active) {
+                await supabase.auth.signOut();
+                throw new Error('Your account has been disabled. Please contact the admin.');
+            }
 
             const role = userData.role;
             localStorage.setItem('access', data.session.access_token);
@@ -68,7 +73,7 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role')
+                .select('role, is_active')
                 .eq('id', data.user.id)
                 .single();
 
@@ -76,6 +81,11 @@ export default function Login() {
                 // If user doesn't exist in 'users' table, log them out
                 await supabase.auth.signOut();
                 throw new Error('Not Registered. Please contact the admin.');
+            }
+
+            if (!userData.is_active) {
+                await supabase.auth.signOut();
+                throw new Error('Your account has been disabled. Please contact the admin.');
             }
 
             const role = userData.role;
@@ -104,6 +114,9 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] p-5">
             <div className="w-full max-w-md bg-white rounded-[15px] p-[25px] shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
 
+                <div className="flex justify-center mb-10">
+                    <img src="/logo.png" alt="Global Agencies Logo" className="h-44 object-contain" />
+                </div>
                 <h1 className="text-[28px] font-bold text-[#1a1a1a] text-center mb-[5px]">Welcome Back</h1>
                 <p className="text-[16px] text-[#666] text-center mb-[30px]">Sign in to your account</p>
 
