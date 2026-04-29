@@ -171,6 +171,7 @@ export default function UploadSale() {
             <TextInput
                 style={styles.input}
                 placeholder="e.g. Samsung S23"
+                placeholderTextColor="#999"
                 value={productName}
                 onChangeText={setProductName}
             />
@@ -179,6 +180,7 @@ export default function UploadSale() {
             <TextInput
                 style={styles.input}
                 placeholder="e.g. SM-S911B"
+                placeholderTextColor="#999"
                 value={modelNo}
                 onChangeText={setModelNo}
             />
@@ -187,6 +189,7 @@ export default function UploadSale() {
             <TextInput
                 style={styles.input}
                 placeholder="e.g. RZ8T123456"
+                placeholderTextColor="#999"
                 value={serialNo}
                 onChangeText={setSerialNo}
             />
@@ -195,6 +198,7 @@ export default function UploadSale() {
             <TextInput
                 style={styles.input}
                 placeholder="e.g. INV-12345"
+                placeholderTextColor="#999"
                 value={billNo}
                 onChangeText={setBillNo}
             />
@@ -203,6 +207,7 @@ export default function UploadSale() {
             <TextInput
                 style={styles.input}
                 placeholder="0.00"
+                placeholderTextColor="#999"
                 value={billAmount}
                 onChangeText={setBillAmount}
                 keyboardType="numeric"

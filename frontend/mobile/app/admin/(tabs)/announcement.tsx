@@ -330,6 +330,7 @@ export default function AdminAnnouncements() {
                     <TextInput
                         style={styles.input}
                         placeholder="e.g. November Sales Competition!"
+                        placeholderTextColor="#999"
                         value={title}
                         onChangeText={setTitle}
                     />
@@ -338,6 +339,7 @@ export default function AdminAnnouncements() {
                     <TextInput
                         style={[styles.input, styles.textArea]}
                         placeholder="Write the full announcement here..."
+                        placeholderTextColor="#999"
                         value={content}
                         onChangeText={setContent}
                         multiline
@@ -351,6 +353,7 @@ export default function AdminAnnouncements() {
                     <TextInput
                         style={[styles.input, { marginBottom: 10, paddingVertical: 8 }]}
                         placeholder="Search promoters by name, email, or shop..."
+                        placeholderTextColor="#999"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />

@@ -112,6 +112,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="promoter@gmail.com"
+                        placeholderTextColor="#999"
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -124,6 +125,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="********"
+                        placeholderTextColor="#999"
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
@@ -135,6 +137,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="Electronics Hub - Downtown"
+                        placeholderTextColor="#999"
                         value={shopName}
                         onChangeText={setShopName}
                     />
@@ -145,6 +148,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="John Doe"
+                        placeholderTextColor="#999"
                         value={fullName}
                         onChangeText={setFullName}
                     />
@@ -155,6 +159,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="+91 9876543210"
+                        placeholderTextColor="#999"
                         value={phoneNumber}
                         onChangeText={setPhoneNumber}
                         keyboardType="phone-pad"
@@ -166,6 +171,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="+91 9876543210"
+                        placeholderTextColor="#999"
                         value={gPayNumber}
                         onChangeText={setGPayNumber}
                         keyboardType="phone-pad"
@@ -177,6 +183,7 @@ export default function AddPromoter() {
                     <TextInput
                         style={styles.input}
                         placeholder="username@upi"
+                        placeholderTextColor="#999"
                         value={upiId}
                         onChangeText={setUpiId}
                         autoCapitalize="none"
