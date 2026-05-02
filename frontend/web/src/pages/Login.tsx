@@ -3,13 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { GoogleLogin } from '@react-oauth/google';
 
+type PendingLogin = {
+    accessToken: string;
+    role: string;
+};
+
+const ALLOWED_ROLES = new Set(['admin', 'promoter']);
+
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
+    const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
     const navigate = useNavigate();
+
+    const finalizeLogin = (accessToken: string, role: string) => {
+        localStorage.setItem('access', accessToken);
+        localStorage.setItem('role', role);
+        if (role === 'admin') {
+            navigate('/admin');
+        } else {
+            navigate('/promoter');
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,25 +54,30 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role, is_active')
+                .select('role, is_active, must_change_password')
                 .eq('id', data.user.id)
                 .single();
 
-            if (userError) throw userError;
+            if (userError) {
+                await supabase.auth.signOut();
+                throw new Error('Not Registered. Please contact the admin.');
+            }
 
             if (!userData.is_active) {
                 await supabase.auth.signOut();
                 throw new Error('Your account has been disabled. Please contact the admin.');
             }
 
-            const role = userData.role;
-            localStorage.setItem('access', data.session.access_token);
-            localStorage.setItem('role', role);
+            if (!ALLOWED_ROLES.has(userData.role)) {
+                await supabase.auth.signOut();
+                throw new Error('Access denied. Only registered admins and promoters can sign in.');
+            }
 
-            if (role === 'admin') {
-                navigate('/admin');
+            if (userData.must_change_password) {
+                setPendingLogin({ accessToken: data.session.access_token, role: userData.role });
+                setShowChangePasswordModal(true);
             } else {
-                navigate('/promoter');
+                finalizeLogin(data.session.access_token, userData.role);
             }
         } catch (err: any) {
             setError(err.message || 'Invalid email or password.');
@@ -73,7 +100,7 @@ export default function Login() {
             // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role, is_active')
+                .select('role, is_active, must_change_password')
                 .eq('id', data.user.id)
                 .single();
 
@@ -88,20 +115,64 @@ export default function Login() {
                 throw new Error('Your account has been disabled. Please contact the admin.');
             }
 
-            const role = userData.role;
-            localStorage.setItem('access', data.session.access_token);
-            localStorage.setItem('role', role);
+            if (!ALLOWED_ROLES.has(userData.role)) {
+                await supabase.auth.signOut();
+                throw new Error('Access denied. Only registered admins and promoters can sign in.');
+            }
 
-            if (role === 'admin') {
-                navigate('/admin');
+            if (userData.must_change_password) {
+                setPendingLogin({ accessToken: data.session.access_token, role: userData.role });
+                setShowChangePasswordModal(true);
             } else {
-                navigate('/promoter');
+                finalizeLogin(data.session.access_token, userData.role);
             }
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Google Login Failed');
         } finally {
             setGoogleLoading(false);
+        }
+    };
+
+    const handleChangePassword = async () => {
+        if (!pendingLogin) return;
+        if (!newPassword.trim() || !confirmPassword.trim()) {
+            setError('Please fill out both password fields.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+        if (newPassword.length < 8) {
+            setError('Password must be at least 8 characters long.');
+            return;
+        }
+
+        setError('');
+        setPasswordUpdateLoading(true);
+        try {
+            const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
+            if (passwordError) throw passwordError;
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { error: profileError } = await supabase
+                    .from('users')
+                    .update({ must_change_password: false })
+                    .eq('id', user.id);
+                if (profileError) throw profileError;
+            }
+
+            setShowChangePasswordModal(false);
+            setNewPassword('');
+            setConfirmPassword('');
+            finalizeLogin(pendingLogin.accessToken, pendingLogin.role);
+            setPendingLogin(null);
+        } catch (err: any) {
+            setError(err.message || 'Failed to update password. Please try again.');
+        } finally {
+            setPasswordUpdateLoading(false);
         }
     };
 
@@ -188,6 +259,44 @@ export default function Login() {
                     </div>
                 </form>
             </div>
+            {showChangePasswordModal && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl">
+                        <h2 className="text-xl font-bold text-[#1a1a1a] mb-2">Change Password Required</h2>
+                        <p className="text-sm text-[#666] mb-5">
+                            For security, update your temporary password before continuing.
+                        </p>
+                        <div className="mb-4">
+                            <label className="block text-[14px] font-[600] text-[#444] mb-2">New Password</label>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2]"
+                                placeholder="Min. 8 characters"
+                            />
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-[14px] font-[600] text-[#444] mb-2">Confirm Password</label>
+                            <input
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2]"
+                                placeholder="Repeat new password"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleChangePassword}
+                            disabled={passwordUpdateLoading}
+                            className={`w-full bg-[#1976d2] rounded-[10px] p-[12px] text-white font-bold ${passwordUpdateLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        >
+                            {passwordUpdateLoading ? 'Updating...' : 'Update Password'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

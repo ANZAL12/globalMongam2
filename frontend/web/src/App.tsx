@@ -13,12 +13,61 @@ import AdminSaleDetail from './pages/admin/SaleDetail';
 import AdminPromoterDetail from './pages/admin/PromoterDetail';
 import AdminAddPromoter from './pages/admin/AddPromoter';
 import AdminLogs from './pages/admin/Logs';
+import { useEffect, useState } from 'react';
+import { supabase } from './services/supabase';
 
 function ProtectedRoute({ children, allowedRole }: { children: JSX.Element, allowedRole: string }) {
   const token = localStorage.getItem('access');
   const role = localStorage.getItem('role');
+  const [checking, setChecking] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const checkMustChangePassword = async () => {
+      if (!token) {
+        if (mounted) setChecking(false);
+        return;
+      }
+
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          localStorage.removeItem('access');
+          localStorage.removeItem('role');
+          if (mounted) {
+            setMustChangePassword(false);
+          }
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('must_change_password')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          if (mounted) setMustChangePassword(false);
+          return;
+        }
+
+        if (mounted) setMustChangePassword(Boolean(data?.must_change_password));
+      } finally {
+        if (mounted) setChecking(false);
+      }
+    };
+
+    void checkMustChangePassword();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   if (!token) return <Navigate to="/" replace />;
+  if (checking) return null;
+  if (mustChangePassword) return <Navigate to="/" replace />;
+  if (!role) return <Navigate to="/" replace />;
   if (role !== allowedRole) return <Navigate to={`/${role}`} replace />;
 
   return children;
