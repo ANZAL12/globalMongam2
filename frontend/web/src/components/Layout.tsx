@@ -32,9 +32,9 @@ export default function Layout() {
             : [];
 
     return (
-        <div className="flex justify-center h-screen bg-[#f5f5f5]">
+        <div className="flex justify-center min-h-[100dvh] bg-[#f5f5f5]">
             {/* Main App Container enforcing a mobile aspect ratio on desktop */}
-            <div className="w-full max-w-md bg-[#f5f5f5] h-full flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
+            <div className="w-full max-w-md bg-[#f5f5f5] min-h-[100dvh] flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
 
                 {/* Mobile Header matching `headerShown: true` from expo-router */}
                 <header className="flex items-center justify-between px-4 h-20 bg-white border-b border-gray-200 shadow-sm">

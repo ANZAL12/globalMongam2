@@ -42,3 +42,11 @@ body {
   background: #cbd5e1;
   border-radius: 10px;
 }
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
