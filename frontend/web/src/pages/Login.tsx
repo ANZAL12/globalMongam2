@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { GoogleLogin } from '@react-oauth/google';
@@ -22,6 +22,37 @@ export default function Login() {
     const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
     const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const bootstrapForcedPasswordChange = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return;
+
+            const { data: userData, error } = await supabase
+                .from('users')
+                .select('role, is_active, must_change_password')
+                .eq('id', session.user.id)
+                .single();
+
+            if (error || !userData?.is_active || !ALLOWED_ROLES.has(userData?.role)) {
+                await supabase.auth.signOut();
+                localStorage.removeItem('access');
+                localStorage.removeItem('role');
+                return;
+            }
+
+            if (userData.must_change_password) {
+                setPendingLogin({ accessToken: session.access_token, role: userData.role });
+                setShowChangePasswordModal(true);
+                return;
+            }
+
+            // Session is valid and no password change is required, continue normally.
+            finalizeLogin(session.access_token, userData.role);
+        };
+
+        void bootstrapForcedPasswordChange();
+    }, []);
 
     const finalizeLogin = (accessToken: string, role: string) => {
         localStorage.setItem('access', accessToken);
