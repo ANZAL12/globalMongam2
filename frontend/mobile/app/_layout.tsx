@@ -10,9 +10,10 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
+const ALLOWED_ROLES = new Set(["admin", "promoter"]);
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
+  const { isAuthenticated, isLoading, role, mustChangePassword, logout } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -62,6 +63,15 @@ function RootLayoutNav() {
       // Redirect to login
       router.replace('/login');
     } else if (isAuthenticated) {
+      // Belt-and-suspenders guard: if role is ever invalid/null while authenticated,
+      // clear session immediately and force login screen.
+      if (!role || !ALLOWED_ROLES.has(role)) {
+        void logout().finally(() => {
+          router.replace('/login');
+        });
+        return;
+      }
+
       if (mustChangePassword) {
         if (segments[0] !== 'change-password') {
           router.replace('/change-password');
@@ -79,7 +89,7 @@ function RootLayoutNav() {
         }
       }
     }
-  }, [isAuthenticated, isLoading, segments, role, mustChangePassword]);
+  }, [isAuthenticated, isLoading, segments, role, mustChangePassword, logout, router]);
 
   if (isLoading) {
     return (

@@ -53,28 +53,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [role, setRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
+    const allowedRoles = new Set(['admin', 'promoter']);
 
     useEffect(() => {
         checkSession();
     }, []);
 
+    const clearLocalSession = async () => {
+        await safeStorage.removeItem('access');
+        await safeStorage.removeItem('refresh');
+        await safeStorage.removeItem('role');
+        await safeStorage.removeItem('must_change_password');
+        setRole(null);
+        setMustChangePassword(false);
+        setIsAuthenticated(false);
+    };
+
     const checkSession = async () => {
         try {
             const token = await safeStorage.getItem('access');
             const storedRole = await safeStorage.getItem('role');
-            const storedMustChange = await safeStorage.getItem('must_change_password');
 
             if (token && storedRole) {
+                // Validate token + profile from Supabase to prevent stale local role from granting access.
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user) {
+                    await clearLocalSession();
+                    return;
+                }
+
+                const { data: userData, error: profileError } = await supabase
+                    .from('users')
+                    .select('role, must_change_password, is_active')
+                    .eq('id', user.id)
+                    .single();
+
+                if (
+                    profileError ||
+                    !userData?.is_active ||
+                    !allowedRoles.has(userData?.role)
+                ) {
+                    await supabase.auth.signOut();
+                    await clearLocalSession();
+                    return;
+                }
+
                 setIsAuthenticated(true);
-                setRole(storedRole);
-                setMustChangePassword(storedMustChange === 'true');
+                setRole(userData.role);
+                setMustChangePassword(Boolean(userData.must_change_password));
             } else {
-                setIsAuthenticated(false);
-                setRole(null);
-                setMustChangePassword(false);
+                await clearLocalSession();
             }
         } catch (error) {
             console.error('Error checking session:', error);
+            await clearLocalSession();
         } finally {
             setIsLoading(false);
         }
@@ -115,15 +147,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             await supabase.auth.signOut();
-            await safeStorage.removeItem('access');
-            await safeStorage.removeItem('refresh');
-            await safeStorage.removeItem('role');
-            await safeStorage.removeItem('must_change_password');
-            setRole(null);
-            setMustChangePassword(false);
-            setIsAuthenticated(false);
+            await clearLocalSession();
         } catch (error) {
             console.error('Error clearing session:', error);
+            await clearLocalSession();
         }
     };
 

@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import { useGoogleSignIn } from "../context/GoogleSignInProvider";
 import { syncPushTokenToBackend } from "../services/notifications";
 
+const ALLOWED_ROLES = new Set(['admin', 'promoter']);
+
 export default function Login() {
     const { login } = useAuth();
     const { googleSignInReady, promptGoogleSignIn } = useGoogleSignIn();
@@ -34,11 +36,19 @@ export default function Login() {
                 .eq('id', data.user.id)
                 .single();
 
-            if (userError) throw userError;
+            if (userError) {
+                await supabase.auth.signOut();
+                throw new Error('Not Registered. Please contact the admin.');
+            }
 
             if (!userData.is_active) {
                 await supabase.auth.signOut();
                 throw new Error('Your account has been disabled. Please contact the admin.');
+            }
+
+            if (!ALLOWED_ROLES.has(userData.role)) {
+                await supabase.auth.signOut();
+                throw new Error('Access denied. Only registered admins and promoters can sign in.');
             }
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);

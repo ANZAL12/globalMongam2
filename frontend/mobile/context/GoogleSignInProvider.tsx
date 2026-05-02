@@ -6,6 +6,8 @@ import { useAuth } from "./AuthContext";
 import { supabase } from "../services/supabase";
 import { syncPushTokenToBackend } from "../services/notifications";
 
+const ALLOWED_ROLES = new Set(["admin", "promoter"]);
+
 type GoogleSignInContextType = {
     /** True when the Google auth request is ready for promptAsync */
     googleSignInReady: boolean;
@@ -26,7 +28,7 @@ export const useGoogleSignIn = () => useContext(GoogleSignInContext);
  */
 export function GoogleSignInProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
-    const { login } = useAuth();
+    const { login, logout } = useAuth();
 
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
@@ -61,6 +63,11 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
                     throw new Error("Your account has been disabled. Please contact the admin.");
                 }
 
+                if (!ALLOWED_ROLES.has(userData.role)) {
+                    await supabase.auth.signOut();
+                    throw new Error("Access denied. Only registered admins and promoters can sign in.");
+                }
+
                 await login(
                     data.session.access_token,
                     data.session.refresh_token,
@@ -71,11 +78,12 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
             } catch (error: unknown) {
                 console.error(error);
                 const message = error instanceof Error ? error.message : "Failed to sign in with Google";
+                await logout();
                 Alert.alert("Login Failed", message);
                 router.replace("/login");
             }
         },
-        [login, router]
+        [login, logout, router]
     );
 
     useEffect(() => {
