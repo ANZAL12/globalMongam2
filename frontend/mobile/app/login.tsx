@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
-import * as AuthSession from "expo-auth-session";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { syncPushTokenToBackend } from "../services/notifications";
@@ -17,21 +16,13 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
-    const redirectUri = Platform.select({
-        android: "com.googleusercontent.apps.612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh:/oauth2redirect",
-        ios: "com.googleusercontent.apps.612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf:/oauth2redirect",
-        default: AuthSession.makeRedirectUri({
-            scheme: "global-agencies",
-            path: "oauth2redirect",
-        }),
-    });
-
+    // Uses Expo default native redirect: android.package + ":/oauthredirect" (see expo-auth-session Google provider).
+    // Google Cloud: Android OAuth client → Advanced → enable custom URI scheme redirects (required since 2024 policy).
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        clientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
-        webClientId: "612035335688-guimkribnu2kdunbv3ivrql507n7qb6s.apps.googleusercontent.com",
-        androidClientId: "612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh.apps.googleusercontent.com",
-        iosClientId: "612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf.apps.googleusercontent.com",
-        redirectUri,
+        clientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
+        webClientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
+        androidClientId: "862395033084-cpvd7pe1q7hlsujb796mcdp25pf17kvf.apps.googleusercontent.com",
+        iosClientId: "862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf.apps.googleusercontent.com",
     });
 
     useEffect(() => {

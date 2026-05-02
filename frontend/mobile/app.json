@@ -7,8 +7,9 @@
     "icon": "./assets/images/GLOBAL2.png",
     "scheme": [
       "global-agencies",
-      "com.googleusercontent.apps.612035335688-8rghibmklm12mnqjh21b6eon1tqot6oh",
-      "com.googleusercontent.apps.612035335688-9g1s2vo6chthmstrapuc7e7bdpf1u6kf"
+      "com.globalagencies.mobile",
+      "com.googleusercontent.apps.862395033084-cpvd7pe1q7hlsujb796mcdp25pf17kvf",
+      "com.googleusercontent.apps.862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf"
     ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
