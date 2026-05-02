@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['logo.png', 'favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Global Agencies App',
         short_name: 'GlobalAgencies',
@@ -21,14 +21,14 @@ export default defineConfig({
         background_color: '#f5f5f5',
         icons: [
           {
-            src: 'vite.svg',
+            src: 'logo.png',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: 'vite.svg',
+            src: 'logo.png',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/png'
           }
         ]
       }
