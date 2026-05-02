@@ -1,79 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from "react-native";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { useRouter } from "expo-router";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
+import { useGoogleSignIn } from "../context/GoogleSignInProvider";
 import { syncPushTokenToBackend } from "../services/notifications";
 
-WebBrowser.maybeCompleteAuthSession();
-
 export default function Login() {
-    const router = useRouter();
     const { login } = useAuth();
+    const { googleSignInReady, promptGoogleSignIn } = useGoogleSignIn();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
-
-    // Uses Expo default native redirect: android.package + ":/oauthredirect" (see expo-auth-session Google provider).
-    // Google Cloud: Android OAuth client → Advanced → enable custom URI scheme redirects (required since 2024 policy).
-    const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        clientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
-        webClientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
-        androidClientId: "862395033084-cpvd7pe1q7hlsujb796mcdp25pf17kvf.apps.googleusercontent.com",
-        iosClientId: "862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf.apps.googleusercontent.com",
-    });
-
-    useEffect(() => {
-        if (response?.type === "success") {
-            const authObj = response.authentication as any;
-            const idToken = authObj?.idToken || authObj?.id_token || response.params?.id_token;
-
-            if (idToken) {
-                handleGoogleLogin(idToken);
-            } else {
-                Alert.alert("Google Login Error", "Authentication succeeded but no ID token was returned.");
-            }
-        }
-    }, [response]);
-
-    const handleGoogleLogin = async (idToken: string) => {
-        try {
-            const { data, error: authError } = await supabase.auth.signInWithIdToken({
-                provider: 'google',
-                token: idToken,
-            });
-
-            if (authError) throw authError;
-
-            // Fetch user role
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('role, must_change_password, is_active')
-                .eq('id', data.user.id)
-                .single();
-
-            if (userError) {
-                await supabase.auth.signOut();
-                throw new Error('Not Registered. Please contact the admin.');
-            }
-
-            if (!userData.is_active) {
-                await supabase.auth.signOut();
-                throw new Error('Your account has been disabled. Please contact the admin.');
-            }
-
-            await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
-            syncPushTokenToBackend();
-        } catch (error: any) {
-            console.error(error);
-            Alert.alert(
-                "Login Failed",
-                error.message || "Failed to sign in with Google"
-            );
-        }
-    };
 
     const handlePasswordLogin = async () => {
         if (!email.trim() || !password.trim()) {
@@ -164,9 +101,9 @@ export default function Login() {
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.googleButton, !request && styles.disabledButton]}
-                    onPress={() => promptAsync()}
-                    disabled={!request}
+                    style={[styles.googleButton, !googleSignInReady && styles.disabledButton]}
+                    onPress={() => void promptGoogleSignIn()}
+                    disabled={!googleSignInReady}
                 >
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>

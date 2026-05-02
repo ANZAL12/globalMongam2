@@ -1,11 +1,15 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { GoogleSignInProvider } from "../context/GoogleSignInProvider";
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
 import { supabase } from "../services/supabase";
 import * as Notifications from 'expo-notifications';
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
@@ -47,7 +51,12 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === 'login';
+    // Allow OAuth callback routes; root must not redirect to /login while the browser hands off to the app.
+    const segment0 = segments[0] as string | undefined;
+    const inAuthGroup =
+      segment0 === "login" ||
+      segment0 === "oauth2redirect" ||
+      segment0 === "oauthredirect";
 
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to login
@@ -86,8 +95,10 @@ function RootLayoutNav() {
 export default function Layout() {
   return (
     <AuthProvider>
-      <StatusBar style="dark" />
-      <RootLayoutNav />
+      <GoogleSignInProvider>
+        <StatusBar style="dark" />
+        <RootLayoutNav />
+      </GoogleSignInProvider>
     </AuthProvider>
   );
 }
