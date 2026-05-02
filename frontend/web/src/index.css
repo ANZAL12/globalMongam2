@@ -27,6 +27,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior-y: none;
+}
+
+html,
+#root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
 }
 
 /* Custom Scrollbar */

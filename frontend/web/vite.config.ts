@@ -14,7 +14,11 @@ export default defineConfig({
         name: 'Global Agencies App',
         short_name: 'GlobalAgencies',
         description: 'PWA for Global Agencies Promoters & Admin',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
         theme_color: '#ffffff',
+        background_color: '#f5f5f5',
         icons: [
           {
             src: 'vite.svg',
