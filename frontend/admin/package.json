@@ -20,7 +20,8 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      ".env"
     ],
     "asar": true,
     "win": {

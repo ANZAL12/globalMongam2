@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl } from "react-native";
 import { supabase } from "../../../services/supabase";
+import { useFocusEffect } from "expo-router";
 
 type Sale = {
     id: string;
@@ -11,10 +12,13 @@ type Sale = {
 export default function PromoterDashboard() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        fetchSales();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchSales();
+        }, [])
+    );
 
     const fetchSales = async () => {
         try {
@@ -32,7 +36,13 @@ export default function PromoterDashboard() {
             console.error("Failed to fetch sales for dashboard", error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchSales();
     };
 
     const totalSalesCount = sales.length;
@@ -44,7 +54,7 @@ export default function PromoterDashboard() {
         return sum + (sale.incentive_amount ? parseFloat(sale.incentive_amount) : 0);
     }, 0);
 
-    if (loading) {
+    if (loading && !refreshing) {
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -53,7 +63,10 @@ export default function PromoterDashboard() {
     }
 
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView 
+            style={styles.container}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
             <Text style={styles.title}>Welcome to your Dashboard</Text>
 
             <View style={styles.cardContainer}>

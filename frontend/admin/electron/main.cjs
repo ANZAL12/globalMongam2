@@ -167,6 +167,80 @@ function registerCloudinaryHandlers() {
       return { success: false, error: error.message };
     }
   });
+
+  // Supabase Admin: Create Promoter using Admin API (ensures correct password hashing)
+  ipcMain.handle('supabase:createPromoter', async (event, data) => {
+    try {
+      const supabaseUrl = process.env.VITE_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!serviceKey || serviceKey === 'your-service-role-key-here') {
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in your .env file');
+      }
+
+      console.log('Creating promoter via Admin API:', data.email);
+
+      // Step 1: Create the auth user via Supabase Admin API
+      const authRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          email_confirm: true,
+          app_metadata: { source: 'admin_rpc' } // tells trigger to skip this user
+        })
+      });
+
+      const authUser = await authRes.json();
+      if (!authRes.ok) throw new Error(authUser.message || 'Failed to create auth user');
+
+      console.log('Auth user created:', authUser.id);
+
+      // Step 2: Create or update the public profile via REST API
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/users?on_conflict=id`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=minimal, resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          id: authUser.id,
+          email: data.email,
+          role: 'promoter',
+          full_name: data.full_name,
+          shop_name: data.shop_name,
+          phone_number: data.phone_number,
+          gpay_number: data.gpay_number,
+          upi_id: data.upi_id || '',
+          is_active: true,
+          must_change_password: true
+        })
+      });
+
+      if (!profileRes.ok) {
+        const profileErr = await profileRes.json();
+        // If profile creation fails, clean up the auth user
+        await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUser.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
+        });
+        throw new Error(profileErr.message || 'Failed to create user profile');
+      }
+
+      console.log('Promoter profile created successfully');
+      return { success: true, user_id: authUser.id };
+    } catch (error) {
+      console.error('Create Promoter Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 app.on('window-all-closed', () => {

@@ -26,6 +26,10 @@ contextBridge.exposeInMainWorld(
       deleteByDate: (dateRange) => ipcRenderer.invoke('cloudinary:deleteByDate', dateRange),
       deleteAll: () => ipcRenderer.invoke('cloudinary:deleteAll'),
       getUsage: () => ipcRenderer.invoke('cloudinary:getUsage')
+    },
+    // Supabase Admin bridge
+    supabase: {
+      createPromoter: (data) => ipcRenderer.invoke('supabase:createPromoter', data),
     }
   }
 );

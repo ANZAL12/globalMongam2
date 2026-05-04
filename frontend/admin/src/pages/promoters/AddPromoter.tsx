@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { logActivity } from '../../utils/logger';
 import { 
@@ -48,23 +47,18 @@ export function AddPromoter() {
     }
 
     try {
-      // 1. Call the custom RPC to bypass email rate limits
-      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_create_promoter', {
-        p_email: email.trim().toLowerCase(),
-        p_password: password.trim(),
-        p_full_name: fullName.trim(),
-        p_shop_name: shopName.trim(),
-        p_phone_number: phoneNumber.trim(),
-        p_gpay_number: gPayNumber.trim(),
-        p_upi_id: upiId.trim()
+      // Use Electron IPC to call the Supabase Admin API (handles password hashing correctly)
+      const result = await (window as any).electron.supabase.createPromoter({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        full_name: fullName.trim(),
+        shop_name: shopName.trim(),
+        phone_number: phoneNumber.trim(),
+        gpay_number: gPayNumber.trim(),
+        upi_id: upiId.trim()
       });
 
-      if (rpcError) throw rpcError;
-      
-      // The RPC returns a JSON object. We check if there's an error in it.
-      if (rpcData && rpcData.error) {
-        throw new Error(rpcData.error);
-      }
+      if (!result.success) throw new Error(result.error);
 
       await logActivity('Register Promoter', `Created account for ${fullName} (${email}) at ${shopName}`);
 
