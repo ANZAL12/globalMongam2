@@ -6,7 +6,8 @@ import {
   ShoppingBag, 
   Megaphone, 
   FileText,
-  UserCog
+  UserCog,
+  Image
 } from 'lucide-react';
 
 const navigation = [
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'Sales', href: '/sales', icon: ShoppingBag },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
   { name: 'Logs', href: '/logs', icon: FileText },
+  { name: 'Media Library', href: '/media', icon: Image },
 ];
 
 export function Sidebar() {

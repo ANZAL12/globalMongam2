@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld(
         // Deliberately strip event as it includes `sender` 
         ipcRenderer.on(channel, (event, ...args) => func(...args));
       }
+    },
+    // Cloudinary bridge
+    cloudinary: {
+      listAssets: (options) => ipcRenderer.invoke('cloudinary:listAssets', options),
+      deleteAssets: (publicIds) => ipcRenderer.invoke('cloudinary:deleteAssets', publicIds),
+      deleteByDate: (dateRange) => ipcRenderer.invoke('cloudinary:deleteByDate', dateRange),
+      deleteAll: () => ipcRenderer.invoke('cloudinary:deleteAll'),
+      getUsage: () => ipcRenderer.invoke('cloudinary:getUsage')
     }
   }
 );

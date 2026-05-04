@@ -1,5 +1,20 @@
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
 const path = require('path');
+const { v2: cloudinary } = require('cloudinary');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+// Configure Cloudinary
+console.log('Cloudinary Config:', {
+  cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm',
+  api_key: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Missing',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Missing'
+});
+
+cloudinary.config({
+  cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm',
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow;
@@ -66,7 +81,92 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    registerCloudinaryHandlers();
+    createWindow();
+  });
+}
+
+function registerCloudinaryHandlers() {
+  console.log('Registering Cloudinary IPC Handlers...');
+  
+  ipcMain.handle('cloudinary:listAssets', async (event, options = {}) => {
+    try {
+      console.log('Listing assets with options:', options);
+      const result = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: options.prefix || '',
+        max_results: options.max_results || 100,
+        direction: options.direction || 'desc',
+        sort_by: options.sort_by || 'created_at',
+        next_cursor: options.next_cursor
+      });
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Cloudinary List Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('cloudinary:deleteAssets', async (event, publicIds) => {
+    try {
+      console.log('Deleting assets (with invalidation):', publicIds);
+      const result = await cloudinary.api.delete_resources(publicIds, { invalidate: true });
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Cloudinary Delete Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('cloudinary:deleteByDate', async (event, { startDate, endDate }) => {
+    try {
+      console.log(`Deleting assets from ${startDate} to ${endDate}`);
+      
+      const searchResult = await cloudinary.search
+        .expression(`created_at:[${startDate} TO ${endDate}]`)
+        .max_results(500)
+        .execute();
+      
+      console.log(`Search found ${searchResult.resources.length} assets.`);
+      const publicIds = searchResult.resources.map(r => r.public_id);
+      
+      if (publicIds.length === 0) {
+        console.log('No assets to delete in this range.');
+        return { success: true, message: 'No assets found in this date range.' };
+      }
+      
+      console.log('Deleting public IDs (with invalidation):', publicIds);
+      const deleteResult = await cloudinary.api.delete_resources(publicIds, { invalidate: true });
+      console.log('Delete result:', deleteResult);
+      return { success: true, data: deleteResult, deletedCount: publicIds.length };
+    } catch (error) {
+      console.error('Cloudinary Bulk Delete Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('cloudinary:deleteAll', async (event) => {
+    try {
+      console.log('Deleting ALL assets (with invalidation)...');
+      const result = await cloudinary.api.delete_all_resources({ invalidate: true });
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Cloudinary Delete All Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('cloudinary:getUsage', async (event) => {
+    try {
+      console.log('Fetching Cloudinary usage stats...');
+      const result = await cloudinary.api.usage();
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Cloudinary Usage Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 app.on('window-all-closed', () => {

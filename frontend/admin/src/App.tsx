@@ -11,6 +11,7 @@ import { SalesList } from './pages/sales/SalesList';
 import { SaleDetails } from './pages/sales/SaleDetails';
 import { Announcements } from './pages/announcements/Announcements';
 import { Logs } from './pages/logs/Logs';
+import { MediaLibrary } from './pages/MediaLibrary';
 
 import { ModalProvider } from './context/ModalContext';
 
@@ -32,6 +33,7 @@ function App() {
             <Route path="/sales/:id" element={<SaleDetails />} />
             <Route path="/announcements" element={<Announcements />} />
             <Route path="/logs" element={<Logs />} />
+            <Route path="/media" element={<MediaLibrary />} />
           </Route>
         </Routes>
       </Router>
