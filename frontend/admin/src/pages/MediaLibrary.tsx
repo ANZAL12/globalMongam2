@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Trash2, 
   Calendar, 
-  Filter, 
   RefreshCw, 
-  Search, 
-  ChevronLeft, 
-  ChevronRight,
   ExternalLink,
   AlertTriangle,
   CheckCircle2,
