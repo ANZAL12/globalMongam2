@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld(
     // Supabase Admin bridge
     supabase: {
       createPromoter: (data) => ipcRenderer.invoke('supabase:createPromoter', data),
+      createUser: (data) => ipcRenderer.invoke('supabase:createUser', data),
     }
   }
 );

@@ -168,8 +168,8 @@ function registerCloudinaryHandlers() {
     }
   });
 
-  // Supabase Admin: Create Promoter using Admin API (ensures correct password hashing)
-  ipcMain.handle('supabase:createPromoter', async (event, data) => {
+  // Supabase Admin: Create User using Admin API
+  ipcMain.handle('supabase:createUser', async (event, data) => {
     try {
       const supabaseUrl = process.env.VITE_SUPABASE_URL;
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -178,9 +178,8 @@ function registerCloudinaryHandlers() {
         throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in your .env file');
       }
 
-      console.log('Creating promoter via Admin API:', data.email);
+      console.log(`Creating ${data.role} via Admin API:`, data.email);
 
-      // Step 1: Create the auth user via Supabase Admin API
       const authRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
         method: 'POST',
         headers: {
@@ -192,16 +191,27 @@ function registerCloudinaryHandlers() {
           email: data.email,
           password: data.password,
           email_confirm: true,
-          app_metadata: { source: 'admin_rpc' } // tells trigger to skip this user
+          app_metadata: { source: 'admin_rpc' }
         })
       });
 
       const authUser = await authRes.json();
       if (!authRes.ok) throw new Error(authUser.message || 'Failed to create auth user');
 
-      console.log('Auth user created:', authUser.id);
+      const profileData = {
+        id: authUser.id,
+        email: data.email,
+        role: data.role || 'promoter',
+        full_name: data.full_name,
+        shop_name: data.shop_name || null,
+        phone_number: data.phone_number || null,
+        gpay_number: data.gpay_number || null,
+        upi_id: data.upi_id || '',
+        is_active: true,
+        must_change_password: true,
+        approver_id: data.approver_id || null
+      };
 
-      // Step 2: Create or update the public profile via REST API
       const profileRes = await fetch(`${supabaseUrl}/rest/v1/users?on_conflict=id`, {
         method: 'POST',
         headers: {
@@ -210,23 +220,11 @@ function registerCloudinaryHandlers() {
           'apikey': serviceKey,
           'Prefer': 'return=minimal, resolution=merge-duplicates'
         },
-        body: JSON.stringify({
-          id: authUser.id,
-          email: data.email,
-          role: 'promoter',
-          full_name: data.full_name,
-          shop_name: data.shop_name,
-          phone_number: data.phone_number,
-          gpay_number: data.gpay_number,
-          upi_id: data.upi_id || '',
-          is_active: true,
-          must_change_password: true
-        })
+        body: JSON.stringify(profileData)
       });
 
       if (!profileRes.ok) {
         const profileErr = await profileRes.json();
-        // If profile creation fails, clean up the auth user
         await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUser.id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
@@ -234,12 +232,16 @@ function registerCloudinaryHandlers() {
         throw new Error(profileErr.message || 'Failed to create user profile');
       }
 
-      console.log('Promoter profile created successfully');
       return { success: true, user_id: authUser.id };
     } catch (error) {
-      console.error('Create Promoter Error:', error);
+      console.error('Create User Error:', error);
       return { success: false, error: error.message };
     }
+  });
+
+  ipcMain.handle('supabase:createPromoter', async (event, data) => {
+    // Legacy support
+    return ipcMain.emit('supabase:createUser', event, { ...data, role: 'promoter' });
   });
 }
 

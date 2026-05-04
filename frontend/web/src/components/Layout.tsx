@@ -22,6 +22,11 @@ export default function Layout() {
             { name: 'Promoters', path: '/admin/promoters', icon: Users },
             { name: 'Logs', path: '/admin/logs', icon: Activity }
         ]
+        : role === 'approver'
+            ? [
+                { name: 'Dashboard', path: '/approver', icon: LayoutDashboard },
+                { name: 'Review Sales', path: '/approver/sales', icon: List }
+            ]
         : role === 'promoter'
             ? [
                 { name: 'Dashboard', path: '/promoter', icon: LayoutDashboard },

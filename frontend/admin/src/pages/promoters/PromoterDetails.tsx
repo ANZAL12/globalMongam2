@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   ChevronRight,
   TrendingUp,
-  History
+  History,
+  ShieldCheck
 } from 'lucide-react';
 
 export function PromoterDetails() {
@@ -38,7 +39,7 @@ export function PromoterDetails() {
         // Fetch promoter details
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*')
+          .select('*, approver:approver_id(full_name)')
           .eq('id', id)
           .single();
 
@@ -221,12 +222,12 @@ export function PromoterDetails() {
                 </div>
               </div>
               <div className="flex items-center text-sm text-gray-600">
-                <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 mr-3">
-                  <CreditCard className="h-4 w-4" />
+                <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-400 mr-3">
+                  <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">GPay Number</p>
-                  <p className="truncate font-medium">{(promoter as any).gpay_number || 'N/A'}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Assigned Approver</p>
+                  <p className="truncate font-bold text-indigo-600">{(promoter as any).approver?.full_name || 'Not Assigned'}</p>
                 </div>
               </div>
             </div>

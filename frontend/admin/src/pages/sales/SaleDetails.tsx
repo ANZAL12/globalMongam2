@@ -322,13 +322,13 @@ export function SaleDetails() {
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-0.5">Verification Status</p>
                         <span className={`px-2.5 py-1 inline-flex text-[10px] leading-5 font-black rounded-full uppercase tracking-widest mt-1 ${
-                          sale.status === 'approved' || sale.status === 'paid'
+                          sale.status === 'approved' || sale.status === 'paid' || sale.status === 'approver_approved'
                             ? 'bg-emerald-100 text-emerald-800'
                             : sale.status === 'rejected'
                             ? 'bg-rose-100 text-rose-800'
                             : 'bg-orange-100 text-orange-800'
                         }`}>
-                          {sale.status}
+                          {sale.status.replace('_', ' ')}
                         </span>
                       </div>
                    </div>
@@ -374,7 +374,7 @@ export function SaleDetails() {
              </h3>
 
              <div className="space-y-6">
-                {sale.status === 'pending' ? (
+                {(sale.status === 'pending' || sale.status === 'approver_approved') ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">

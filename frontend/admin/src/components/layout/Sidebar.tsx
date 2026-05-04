@@ -7,11 +7,13 @@ import {
   Megaphone, 
   FileText,
   UserCog,
-  Image
+  Image,
+  ShieldCheck
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Approvers', href: '/approvers', icon: ShieldCheck },
   { name: 'Promoters', href: '/promoters', icon: Users },
   { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog },
   { name: 'Sales', href: '/sales', icon: ShoppingBag },

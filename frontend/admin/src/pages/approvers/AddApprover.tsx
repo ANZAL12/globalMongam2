@@ -1,57 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { logActivity } from '../../utils/logger';
 import { 
   UserPlus, 
   ArrowLeft, 
   Mail, 
   Lock, 
-  Store, 
   User, 
   Phone, 
-  CreditCard,
   AlertCircle,
   CheckCircle2,
-  Users
+  ShieldCheck
 } from 'lucide-react';
 
-export function AddPromoter() {
+export function AddApprover() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [shopName, setShopName] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [gPayNumber, setGPayNumber] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [approverId, setApproverId] = useState('');
-  const [approvers, setApprovers] = useState<{id: string, full_name: string}[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingApprovers, setFetchingApprovers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
   const navigate = useNavigate();
-
-  useEffect(() => {
-    async function fetchApprovers() {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, full_name')
-          .eq('role', 'approver')
-          .eq('is_active', true);
-        
-        if (error) throw error;
-        setApprovers(data || []);
-      } catch (err) {
-        console.error('Error fetching approvers:', err);
-      } finally {
-        setFetchingApprovers(false);
-      }
-    }
-    fetchApprovers();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +30,7 @@ export function AddPromoter() {
     setError(null);
 
     // Validation
-    if (!email.trim() || !password.trim() || !shopName.trim() || !fullName.trim() || !phoneNumber.trim() || !gPayNumber.trim() || !upiId.trim() || !approverId) {
+    if (!email.trim() || !password.trim() || !fullName.trim() || !phoneNumber.trim()) {
       setError('Please fill in all required fields marked with *');
       setLoading(false);
       return;
@@ -77,23 +48,19 @@ export function AddPromoter() {
         email: email.trim().toLowerCase(),
         password: password.trim(),
         full_name: fullName.trim(),
-        shop_name: shopName.trim(),
         phone_number: phoneNumber.trim(),
-        gpay_number: gPayNumber.trim(),
-        upi_id: upiId.trim(),
-        role: 'promoter',
-        approver_id: approverId
+        role: 'approver'
       });
 
       if (!result.success) throw new Error(result.error);
 
-      await logActivity('Register Promoter', `Created account for ${fullName} (${email}) at ${shopName}. Assigned to approver: ${approvers.find(a => a.id === approverId)?.full_name}`);
+      await logActivity('Register Approver', `Created approver account for ${fullName} (${email})`);
 
       setSuccess(true);
-      setTimeout(() => navigate('/promoters'), 2000);
+      setTimeout(() => navigate('/approvers'), 2000);
     } catch (err: any) {
-      console.error('Error creating promoter:', err);
-      setError(err.message || 'Failed to create promoter account');
+      console.error('Error creating approver:', err);
+      setError(err.message || 'Failed to create approver account');
     } finally {
       setLoading(false);
     }
@@ -103,14 +70,14 @@ export function AddPromoter() {
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center space-x-4">
         <button
-          onClick={() => navigate('/promoters')}
+          onClick={() => navigate('/approvers')}
           className="p-2 rounded-xl bg-white border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all hover:shadow-sm"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add New Promoter</h1>
-          <p className="mt-1 text-sm text-gray-500">Create a new account for a promoter to start tracking sales.</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add New Approver</h1>
+          <p className="mt-1 text-sm text-gray-500">Create a new approver account to review promoter sales.</p>
         </div>
       </div>
 
@@ -121,7 +88,7 @@ export function AddPromoter() {
               <CheckCircle2 className="h-10 w-10" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Account Created!</h2>
-            <p className="text-gray-500">The promoter account has been successfully created. Redirecting you back...</p>
+            <p className="text-gray-500">The approver account has been successfully created. Redirecting you back...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -142,7 +109,7 @@ export function AddPromoter() {
                   type="email"
                   required
                   className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="promoter@example.com"
+                  placeholder="approver@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -172,24 +139,9 @@ export function AddPromoter() {
                   type="text"
                   required
                   className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="John Doe"
+                  placeholder="Approver Name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 flex items-center">
-                  <Store className="h-4 w-4 mr-2 text-gray-400" />
-                  Shop Name / Location *
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="Electronics Emporium"
-                  value={shopName}
-                  onChange={(e) => setShopName(e.target.value)}
                 />
               </div>
 
@@ -207,71 +159,19 @@ export function AddPromoter() {
                   onChange={(e) => setPhoneNumber(e.target.value)}
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 flex items-center">
-                  <CreditCard className="h-4 w-4 mr-2 text-gray-400" />
-                  GPay Number *
-                </label>
-                <input
-                  type="tel"
-                  className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="+91 88888 88888"
-                  value={gPayNumber}
-                  onChange={(e) => setGPayNumber(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 flex items-center">
-                  <CreditCard className="h-4 w-4 mr-2 text-gray-400" />
-                  UPI ID *
-                </label>
-                <input
-                  type="text"
-                  className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="username@upi"
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 flex items-center">
-                  <Users className="h-4 w-4 mr-2 text-gray-400" />
-                  Assigned Approver *
-                </label>
-                <select
-                  required
-                  className="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none bg-white"
-                  value={approverId}
-                  onChange={(e) => setApproverId(e.target.value)}
-                >
-                  <option value="">Select an Approver</option>
-                  {approvers.map((approver) => (
-                    <option key={approver.id} value={approver.id}>
-                      {approver.full_name}
-                    </option>
-                  ))}
-                </select>
-                {fetchingApprovers && <p className="text-[10px] text-gray-400 italic">Loading approvers...</p>}
-                {!fetchingApprovers && approvers.length === 0 && (
-                  <p className="text-[10px] text-rose-500 italic">No approvers found. Create an approver first.</p>
-                )}
-              </div>
             </div>
 
             <div className="pt-4 flex items-center justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => navigate('/promoters')}
+                onClick={() => navigate('/approvers')}
                 className="px-6 py-3 border border-gray-200 text-sm font-bold text-gray-600 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={loading || fetchingApprovers}
+                disabled={loading}
                 className="inline-flex items-center px-8 py-3 border border-transparent shadow-sm text-sm font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all active:scale-95"
               >
                 {loading ? (
@@ -281,8 +181,8 @@ export function AddPromoter() {
                   </>
                 ) : (
                   <>
-                    <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                    Register Promoter
+                    <ShieldCheck className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                    Register Approver
                   </>
                 )}
               </button>

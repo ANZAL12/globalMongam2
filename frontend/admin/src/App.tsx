@@ -7,6 +7,8 @@ import { AddPromoter } from './pages/promoters/AddPromoter';
 import { PromoterDetails } from './pages/promoters/PromoterDetails';
 import { PromoterManage } from './pages/promoters/PromoterManage';
 import { EditPromoter } from './pages/promoters/EditPromoter';
+import { ApproversList } from './pages/approvers/ApproversList';
+import { AddApprover } from './pages/approvers/AddApprover';
 import { SalesList } from './pages/sales/SalesList';
 import { SaleDetails } from './pages/sales/SaleDetails';
 import { Announcements } from './pages/announcements/Announcements';
@@ -29,6 +31,8 @@ function App() {
             <Route path="/promoters/new" element={<AddPromoter />} />
             <Route path="/promoters/:id/edit" element={<EditPromoter />} />
             <Route path="/promoters/:id" element={<PromoterDetails />} />
+            <Route path="/approvers" element={<ApproversList />} />
+            <Route path="/approvers/new" element={<AddApprover />} />
             <Route path="/sales" element={<SalesList />} />
             <Route path="/sales/:id" element={<SaleDetails />} />
             <Route path="/announcements" element={<Announcements />} />
