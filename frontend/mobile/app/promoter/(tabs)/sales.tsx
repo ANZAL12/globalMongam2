@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity } from "react-native";
 import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
 
 type Sale = {
     id: string;
@@ -56,6 +57,31 @@ export default function MySales() {
         fetchSales();
     };
 
+    const handleDeleteSale = (saleId: string) => {
+        Alert.alert(
+            "Delete Sale",
+            "Are you sure you want to delete this sale?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const { error } = await supabase.from('sales').delete().eq('id', saleId);
+                            if (error) throw error;
+                            
+                            // Refresh list
+                            fetchSales();
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "Failed to delete sale.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case "approved": return "#4caf50";
@@ -87,12 +113,22 @@ export default function MySales() {
                 renderItem={({ item }) => (
                     <View style={styles.card}>
                         <View style={styles.cardHeader}>
-                            <View>
+                            <View style={{ flex: 1 }}>
                                 <Text style={styles.productName}>{item.product_name}</Text>
                                 {item.model_no && <Text style={styles.billNoText}>Model: {item.model_no}</Text>}
                                 {item.bill_no && <Text style={styles.billNoText}>Bill: {item.bill_no}</Text>}
                             </View>
-                            <Text style={styles.billAmount}>₹{item.bill_amount}</Text>
+                            <View style={{ alignItems: "flex-end" }}>
+                                <Text style={styles.billAmount}>₹{item.bill_amount}</Text>
+                                {(item.status === 'pending' || item.status === 'rejected') && (
+                                    <TouchableOpacity 
+                                        style={styles.deleteButton} 
+                                        onPress={() => handleDeleteSale(item.id)}
+                                    >
+                                        <Ionicons name="trash-outline" size={20} color="#f44336" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         </View>
 
                         <View style={styles.detailsRow}>
@@ -179,6 +215,12 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: "#1976d2",
+    },
+    deleteButton: {
+        marginTop: 10,
+        padding: 5,
+        backgroundColor: "#ffebee",
+        borderRadius: 20,
     },
     detailsRow: {
         flexDirection: "row",

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
+import { Trash2 } from 'lucide-react';
 
 type Sale = {
     id: string; // UUID
@@ -44,6 +45,19 @@ export default function PromoterSales() {
         fetchSales();
     }, []);
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this sale?")) return;
+
+        try {
+            const { error } = await supabase.from('sales').delete().eq('id', id);
+            if (error) throw error;
+            fetchSales();
+        } catch (error) {
+            console.error('Failed to delete sale:', error);
+            alert('Failed to delete sale');
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'approved': return '#4caf50';
@@ -77,7 +91,18 @@ export default function PromoterSales() {
                                     {item.model_no && <p className="text-[14px] text-[#666] mt-[2px]">Model: {item.model_no}</p>}
                                     {item.bill_no && <p className="text-[14px] text-[#666] mt-[2px]">Bill: {item.bill_no}</p>}
                                 </div>
-                                <p className="text-[18px] font-bold text-[#1976d2]">₹{item.bill_amount}</p>
+                                <div className="flex flex-col items-end">
+                                    <p className="text-[18px] font-bold text-[#1976d2]">₹{item.bill_amount}</p>
+                                    {(item.status === 'pending' || item.status === 'rejected') && (
+                                        <button 
+                                            onClick={() => handleDelete(item.id)}
+                                            className="mt-2 p-1.5 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"
+                                            title="Delete Sale"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex flex-row justify-between mb-[10px]">
