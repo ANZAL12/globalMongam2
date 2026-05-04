@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-packager . \"Admin Dashboard\" --platform=win32 --arch=x64 --icon=icon.ico --out=dist_electron --overwrite"
+    "electron:build": "npm run build && electron-builder build --win --publish never"
   },
   "build": {
     "appId": "com.globalagencies.admin",
@@ -22,8 +22,19 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "asar": true,
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
     }
   },
   "dependencies": {
