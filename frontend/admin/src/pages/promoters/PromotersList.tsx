@@ -18,18 +18,27 @@ export function PromotersList() {
   const [promoters, setPromoters] = useState<Promoter[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
     async function fetchPromoters() {
       try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('role', 'promoter')
-          .order('created_at', { ascending: false });
+        const [{ data, error }, { count, error: pendingError }] = await Promise.all([
+          supabase
+            .from('users')
+            .select('*')
+            .eq('role', 'promoter')
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('promoter_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pending'),
+        ]);
 
         if (error) throw error;
+        if (pendingError) throw pendingError;
         setPromoters(data || []);
+        setPendingRequestsCount(count || 0);
       } catch (err) {
         console.error('Error fetching promoters:', err);
       } finally {
@@ -61,13 +70,26 @@ export function PromotersList() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Promoters</h1>
           <p className="mt-1 text-sm text-gray-500">Manage all registered promoters and their accounts.</p>
         </div>
-        <Link
-          to="/promoters/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95"
-        >
-          <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-          Add Promoter
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/promoters/pending"
+            className="relative inline-flex items-center px-4 py-2 border border-gray-200 shadow-sm text-sm font-semibold rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95"
+          >
+            Pending Requests
+            {pendingRequestsCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/promoters/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95"
+          >
+            <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            Add Promoter
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
@@ -109,7 +131,7 @@ export function PromotersList() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
+                      <div className="h-10 w-10 shrink-0">
                         <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                           {promoter.full_name?.charAt(0) || promoter.email.charAt(0).toUpperCase()}
                         </div>

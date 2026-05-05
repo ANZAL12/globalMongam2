@@ -43,9 +43,9 @@ export function SaleDetails() {
   } | null>(null);
 
   useEffect(() => {
-    async function fetchSale() {
+    async function fetchSale(isInitial = true) {
       if (!id) return;
-      setLoading(true);
+      if (isInitial) setLoading(true);
       setError(null);
       try {
         const { data, error } = await supabase
@@ -100,11 +100,34 @@ export function SaleDetails() {
       } catch (err) {
         console.error('Error fetching sale details:', err);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     }
 
-    fetchSale();
+
+    fetchSale(true);
+
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`sale-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sales' },
+        (payload) => {
+          console.log('Real-time sale update:', payload);
+          // Check if the change is for the current sale
+          const recordId = payload.new?.id || payload.old?.id;
+          if (recordId === id) {
+            fetchSale(false); // Silent fetch, no loading spinner
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   // Admin does not approve/reject sales.
@@ -502,8 +525,8 @@ export function SaleDetails() {
                   </div>
                 )}
 
-                {/* Show QR Code only when ready to pay */}
-                {(sale.status === 'approver_approved') && sale.payment_status !== 'paid' && (
+                {/* Show QR Code only when ready to pay and amount > 0 */}
+                {(sale.status === 'approver_approved') && sale.payment_status !== 'paid' && parseFloat(incentiveAmount || sale.incentive_amount || '0') > 0 && (
                   <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 space-y-4">
                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Scan to Pay via UPI</p>
                     

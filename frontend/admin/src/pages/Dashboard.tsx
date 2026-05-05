@@ -23,6 +23,10 @@ export function Dashboard() {
             *,
             promoter:users!sales_promoter_id_fkey (
               email
+            ),
+            approver:users!approved_by (
+              full_name,
+              email
             )
           `)
           .order('created_at', { ascending: false });
@@ -32,6 +36,7 @@ export function Dashboard() {
         const mappedSales = (data || []).map((sale: any) => ({
           ...sale,
           promoter_email: sale.promoter?.email || 'Unknown',
+          approver_name: sale.approver?.full_name || sale.approver?.email || null,
         }));
         
         setSales(mappedSales);
@@ -141,13 +146,17 @@ export function Dashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{sale.bill_amount}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
-                      sale.status === 'approved' || sale.status === 'paid'
+                      sale.status === 'approver_approved'
+                        ? 'bg-blue-100 text-blue-800'
+                        : sale.status === 'approved' || sale.status === 'paid'
                         ? 'bg-emerald-100 text-emerald-800'
                         : sale.status === 'rejected'
                         ? 'bg-rose-100 text-rose-800'
                         : 'bg-orange-100 text-orange-800'
                     }`}>
-                      {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+                      {sale.status === 'approver_approved'
+                        ? `Approved by ${sale.approver_name || 'Approver'}`
+                        : sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">

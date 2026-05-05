@@ -138,9 +138,9 @@ export function PromoterManage() {
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between group-hover:bg-indigo-50 transition-colors">
-               <span className="text-xs font-semibold text-gray-500 group-hover:text-indigo-600">Click to Edit</span>
-               <button className="h-8 w-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
+            <div className="promoter-edit-footer px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between group-hover:bg-indigo-50 transition-colors">
+               <span className="promoter-edit-label text-xs font-semibold text-gray-500 group-hover:text-indigo-600">Click to Edit</span>
+               <button className="promoter-edit-icon h-8 w-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
                   <Edit className="h-4 w-4" />
                </button>
             </div>

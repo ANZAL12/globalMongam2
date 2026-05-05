@@ -50,6 +50,13 @@ export default function ApproverTabLayout() {
           tabBarIcon: ({ color }) => <MaterialIcons name="fact-check" size={24} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="add-promoter"
+        options={{
+          title: "Add Promoter",
+          tabBarIcon: ({ color }) => <MaterialIcons name="person-add-alt-1" size={24} color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

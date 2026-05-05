@@ -43,6 +43,10 @@ export function SalesList() {
             *,
             promoter:users!sales_promoter_id_fkey (
               email
+            ),
+            approver:users!approved_by (
+              full_name,
+              email
             )
           `)
           .order('created_at', { ascending: false });
@@ -52,6 +56,7 @@ export function SalesList() {
         const mappedSales = (data || []).map((sale: any) => ({
           ...sale,
           promoter_email: sale.promoter?.email || 'Unknown',
+          approver_name: sale.approver?.full_name || sale.approver?.email || null,
         }));
 
         setSales(mappedSales);
@@ -62,7 +67,23 @@ export function SalesList() {
       }
     }
 
+
     fetchSales();
+
+    const channel = supabase
+      .channel('sales-list-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sales' },
+        () => {
+          fetchSales();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredSales = sales.filter(s => {
@@ -79,6 +100,13 @@ export function SalesList() {
   const awaitingApproverCount = sales.filter(s => s.status === 'pending').length;
   const readyToPayCount = sales.filter(s => s.status === 'approver_approved' && s.payment_status !== 'paid').length;
   const paidCount = sales.filter(s => s.payment_status === 'paid').length;
+
+  const getSaleStatusLabel = (sale: any) => {
+    if (sale.status === 'approver_approved') {
+      return `Approved by ${sale.approver_name || 'Approver'}`;
+    }
+    return sale.status.replace('_', ' ');
+  };
 
   if (loading) {
     return (
@@ -132,14 +160,14 @@ export function SalesList() {
                 setStatusFilter('pending');
                 setSearchParams(searchParams, { replace: true });
               }}
-              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
                 statusFilter === 'pending'
                   ? 'bg-orange-50 border-orange-200 text-orange-800'
                   : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Awaiting Approver</div>
-              <div className="text-2xl font-black mt-1">{awaitingApproverCount}</div>
+              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Awaiting Approver</div>
+              <div className="sales-kpi-count text-2xl font-black mt-1">{awaitingApproverCount}</div>
             </button>
             <button
               onClick={() => {
@@ -147,14 +175,14 @@ export function SalesList() {
                 setStatusFilter('approver_approved');
                 setSearchParams(searchParams, { replace: true });
               }}
-              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
                 statusFilter === 'approver_approved'
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Ready to Pay</div>
-              <div className="text-2xl font-black mt-1">{readyToPayCount}</div>
+              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Ready to Pay</div>
+              <div className="sales-kpi-count text-2xl font-black mt-1">{readyToPayCount}</div>
             </button>
             <button
               onClick={() => {
@@ -162,14 +190,14 @@ export function SalesList() {
                 setStatusFilter('paid');
                 setSearchParams(searchParams, { replace: true });
               }}
-              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
                 statusFilter === 'paid'
                   ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
                   : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Paid</div>
-              <div className="text-2xl font-black mt-1">{paidCount}</div>
+              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Paid</div>
+              <div className="sales-kpi-count text-2xl font-black mt-1">{paidCount}</div>
             </button>
           </div>
           <p className="mt-3 text-xs text-gray-500 font-medium">
@@ -221,8 +249,10 @@ export function SalesList() {
                     )}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      sale.status === 'approver_approved' || sale.status === 'paid'
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${
+                      sale.status === 'approver_approved'
+                        ? 'bg-blue-100 text-blue-800'
+                        : sale.status === 'paid'
                         ? 'bg-emerald-100 text-emerald-800'
                         : sale.status === 'rejected'
                         ? 'bg-rose-100 text-rose-800'
@@ -235,7 +265,7 @@ export function SalesList() {
                       ) : (
                         <Clock className="h-3 w-3 mr-1" />
                       )}
-                      {sale.status.replace('_', ' ')}
+                      {getSaleStatusLabel(sale)}
                     </span>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
