@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [role, setRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
-    const allowedRoles = new Set(['admin', 'promoter']);
+    const allowedRoles = new Set(['admin', 'promoter', 'approver']);
 
     useEffect(() => {
         checkSession();

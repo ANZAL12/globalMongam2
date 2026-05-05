@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useGoogleSignIn } from "../context/GoogleSignInProvider";
 import { syncPushTokenToBackend } from "../services/notifications";
 
-const ALLOWED_ROLES = new Set(['admin', 'promoter']);
+const ALLOWED_ROLES = new Set(['admin', 'promoter', 'approver']);
 
 export default function Login() {
     const { login } = useAuth();

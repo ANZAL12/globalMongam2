@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logActivity } from '../../utils/logger';
 import { 
-  UserPlus, 
   ArrowLeft, 
   Mail, 
   Lock, 
@@ -43,8 +42,19 @@ export function AddApprover() {
     }
 
     try {
+      const createUser = (window as any)?.electron?.supabase?.createUser as
+        | ((payload: any) => Promise<{ success: boolean; error?: string }>)
+        | undefined;
+
+      if (!createUser) {
+        throw new Error(
+          'Approver registration is available only inside the Admin desktop app (Electron). ' +
+            'From the frontend/admin folder, run: npm run electron:dev'
+        );
+      }
+
       // Use Electron IPC to call the Supabase Admin API
-      const result = await (window as any).electron.supabase.createUser({
+      const result = await createUser({
         email: email.trim().toLowerCase(),
         password: password.trim(),
         full_name: fullName.trim(),
@@ -94,7 +104,7 @@ export function AddApprover() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="flex items-center space-x-3 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 animate-in slide-in-from-top-2">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 shrink-0" />
                 <p className="text-sm font-medium">{error}</p>
               </div>
             )}

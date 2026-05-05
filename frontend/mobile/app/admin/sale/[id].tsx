@@ -86,73 +86,8 @@ export default function SaleDetailScreen() {
         }
     };
 
-    const handleApprove = async () => {
-        if (!incentiveInput || isNaN(parseFloat(incentiveInput))) {
-            Alert.alert("Invalid Input", "Please enter a valid incentive amount.");
-            return;
-        }
-
-        setIsProcessing(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            // Fetch the admin's own email from users table
-            const { data: adminData } = await supabase
-                .from('users')
-                .select('email')
-                .eq('id', user!.id)
-                .single();
-            const { error } = await supabase
-                .from('sales')
-                .update({ 
-                    status: "approved", 
-                    incentive_amount: parseFloat(incentiveInput), 
-                    transaction_id: transactionIdInput,
-                    approved_at: new Date().toISOString(),
-                    approved_by: user?.id,
-                    approved_by_email: adminData?.email || user?.email
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-            Alert.alert("Success", "Sale has been approved.");
-            fetchSaleDetails();
-        } catch (error) {
-            Alert.alert("Error", "Failed to approve sale.");
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handleReject = async () => {
-        Alert.alert(
-            "Reject Sale",
-            "Are you sure you want to reject this sale?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Reject",
-                    style: "destructive",
-                    onPress: async () => {
-                        setIsProcessing(true);
-                        try {
-                            const { error } = await supabase
-                                .from('sales')
-                                .update({ status: "rejected" })
-                                .eq('id', id);
-
-                            if (error) throw error;
-                            Alert.alert("Success", "Sale has been rejected.");
-                            fetchSaleDetails();
-                        } catch (error) {
-                            Alert.alert("Error", "Failed to reject sale.");
-                        } finally {
-                            setIsProcessing(false);
-                        }
-                    }
-                }
-            ]
-        );
-    };
+    // Admin does not approve/reject sales.
+    // Approvers handle approval; admin only handles payouts (mark paid) after approver approval.
 
     const handleMarkPaid = async () => {
         setIsProcessing(true);
@@ -167,6 +102,7 @@ export default function SaleDetailScreen() {
             const { error } = await supabase
                 .from('sales')
                 .update({ 
+                    status: "paid",
                     payment_status: "paid", 
                     transaction_id: transactionIdInput || sale?.transaction_id,
                     paid_at: new Date().toISOString(),
@@ -194,7 +130,7 @@ export default function SaleDetailScreen() {
     }
 
     const isPending = sale.status === "pending";
-    const isApprovedUnpaid = sale.status === "approved" && sale.payment_status === "unpaid";
+    const isReadyToPay = sale.status === "approver_approved" && sale.payment_status === "unpaid";
 
     // Support image URLs lacking the absolute server path if requested locally
     const getImageUrl = (url: string) => {
@@ -294,29 +230,10 @@ export default function SaleDetailScreen() {
 
                 {!isProcessing && isPending && (
                     <View style={styles.actionsContainer}>
-                        <Text style={styles.label}>Assign Incentive Amount (₹)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={incentiveInput}
-                            onChangeText={setIncentiveInput}
-                            keyboardType="numeric"
-                            placeholder="10.00"
-                        />
-                        <Text style={styles.label}>Transaction ID (Optional)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={transactionIdInput}
-                            onChangeText={setTransactionIdInput}
-                            placeholder="TXN12345678"
-                        />
-                        <View style={styles.buttonRow}>
-                            <View style={styles.buttonWrapper}>
-                                <Button title="Approve" onPress={handleApprove} color="#4caf50" />
-                            </View>
-                            <View style={styles.buttonWrapper}>
-                                <Button title="Reject" onPress={handleReject} color="#f44336" />
-                            </View>
-                        </View>
+                        <Text style={styles.label}>Waiting for approver review</Text>
+                        <Text style={styles.value}>
+                            This sale must be approved by an approver before it can be paid.
+                        </Text>
                     </View>
                 )}
 
@@ -327,7 +244,7 @@ export default function SaleDetailScreen() {
                     </View>
                 )}
 
-                {!isProcessing && (sale.status === "approved" || (sale.status === "pending" && incentiveInput)) && sale.payment_status !== "paid" && (
+                {!isProcessing && isReadyToPay && sale.payment_status !== "paid" && (
                     <View style={styles.upiContainer}>
                         <Text style={[styles.label, { color: '#1976d2' }]}>Scan to Pay (UPI)</Text>
                         {(sale.promoter_upi || sale.promoter_phone) ? (
@@ -359,7 +276,7 @@ export default function SaleDetailScreen() {
                     </View>
                 )}
 
-                {!isProcessing && isApprovedUnpaid && (
+                {!isProcessing && isReadyToPay && (
                     <View style={styles.markPaidContainer}>
                         <Text style={styles.label}>Transaction ID (Update if needed)</Text>
                         <TextInput

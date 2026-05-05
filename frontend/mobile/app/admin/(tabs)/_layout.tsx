@@ -48,8 +48,8 @@ export default function AdminTabLayout() {
             <Tabs.Screen
                 name="sales"
                 options={{
-                    title: "All Sales",
-                    tabBarIcon: ({ color }) => <MaterialIcons name="list" size={24} color={color} />,
+                    title: "Payouts",
+                    tabBarIcon: ({ color }) => <MaterialIcons name="payments" size={24} color={color} />,
                 }}
             />
             <Tabs.Screen

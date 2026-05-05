@@ -76,6 +76,10 @@ export function SalesList() {
     return matchesSearch && matchesStatus;
   });
 
+  const awaitingApproverCount = sales.filter(s => s.status === 'pending').length;
+  const readyToPayCount = sales.filter(s => s.status === 'approver_approved' && s.payment_status !== 'paid').length;
+  const paidCount = sales.filter(s => s.payment_status === 'paid').length;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -113,11 +117,64 @@ export function SalesList() {
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
+              <option value="approver_approved">Approved by Approver</option>
               <option value="paid">Paid</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
+        </div>
+
+        <div className="px-8 py-5 border-b border-gray-50 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              onClick={() => {
+                searchParams.set('status', 'pending');
+                setStatusFilter('pending');
+                setSearchParams(searchParams, { replace: true });
+              }}
+              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+                statusFilter === 'pending'
+                  ? 'bg-orange-50 border-orange-200 text-orange-800'
+                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Awaiting Approver</div>
+              <div className="text-2xl font-black mt-1">{awaitingApproverCount}</div>
+            </button>
+            <button
+              onClick={() => {
+                searchParams.set('status', 'approver_approved');
+                setStatusFilter('approver_approved');
+                setSearchParams(searchParams, { replace: true });
+              }}
+              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+                statusFilter === 'approver_approved'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Ready to Pay</div>
+              <div className="text-2xl font-black mt-1">{readyToPayCount}</div>
+            </button>
+            <button
+              onClick={() => {
+                searchParams.set('status', 'paid');
+                setStatusFilter('paid');
+                setSearchParams(searchParams, { replace: true });
+              }}
+              className={`px-4 py-3 rounded-2xl text-left border transition-all ${
+                statusFilter === 'paid'
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Paid</div>
+              <div className="text-2xl font-black mt-1">{paidCount}</div>
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-gray-500 font-medium">
+            Approver handles approvals. Admin should only disburse payments after approver approval.
+          </p>
         </div>
 
         <div className="overflow-x-auto">
@@ -165,20 +222,20 @@ export function SalesList() {
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      sale.status === 'approved' || sale.status === 'paid'
+                      sale.status === 'approver_approved' || sale.status === 'paid'
                         ? 'bg-emerald-100 text-emerald-800'
                         : sale.status === 'rejected'
                         ? 'bg-rose-100 text-rose-800'
                         : 'bg-orange-100 text-orange-800'
                     }`}>
-                      {sale.status === 'approved' || sale.status === 'paid' ? (
+                      {sale.status === 'approver_approved' || sale.status === 'paid' ? (
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                       ) : sale.status === 'rejected' ? (
                         <XCircle className="h-3 w-3 mr-1" />
                       ) : (
                         <Clock className="h-3 w-3 mr-1" />
                       )}
-                      {sale.status}
+                      {sale.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">

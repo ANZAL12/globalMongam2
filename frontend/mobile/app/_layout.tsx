@@ -10,7 +10,7 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
-const ALLOWED_ROLES = new Set(["admin", "promoter"]);
+const ALLOWED_ROLES = new Set(["admin", "promoter", "approver"]);
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, mustChangePassword, logout } = useAuth();
@@ -85,6 +85,10 @@ function RootLayoutNav() {
         } else if (role === 'promoter') {
           if (segments[0] !== 'promoter') {
             router.replace('/promoter');
+          }
+        } else if (role === 'approver') {
+          if (segments[0] !== 'approver') {
+            router.replace('/approver');
           }
         }
       }

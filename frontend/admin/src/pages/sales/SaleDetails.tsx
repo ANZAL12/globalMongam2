@@ -34,6 +34,13 @@ export function SaleDetails() {
   const { showAlert, showConfirm } = useModal();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [approver, setApprover] = useState<{
+    id: string;
+    email: string | null;
+    full_name: string | null;
+    phone_number: string | null;
+    expo_push_token: string | null;
+  } | null>(null);
 
   useEffect(() => {
     async function fetchSale() {
@@ -50,7 +57,8 @@ export function SaleDetails() {
               email,
               phone_number,
               gpay_number,
-              upi_id
+              upi_id,
+              approver_id
             )
           `)
           .eq('id', id)
@@ -73,6 +81,22 @@ export function SaleDetails() {
         setSale(mappedResult);
         setIncentiveAmount(data.incentive_amount?.toString() || '');
         setTransactionId(data.transaction_id || '');
+
+        const approverId = data.promoter?.approver_id as string | null | undefined;
+        if (approverId) {
+          const { data: approverData, error: approverError } = await supabase
+            .from('users')
+            .select('id, email, full_name, phone_number, expo_push_token')
+            .eq('id', approverId)
+            .single();
+          if (!approverError && approverData) {
+            setApprover(approverData);
+          } else {
+            setApprover(null);
+          }
+        } else {
+          setApprover(null);
+        }
       } catch (err) {
         console.error('Error fetching sale details:', err);
       } finally {
@@ -83,76 +107,8 @@ export function SaleDetails() {
     fetchSale();
   }, [id]);
 
-  const handleApprove = async () => {
-    if (!incentiveAmount || isNaN(parseFloat(incentiveAmount))) {
-      setError('Please enter a valid incentive amount');
-      return;
-    }
-
-    setProcessing(true);
-    setError(null);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: adminData } = await supabase
-        .from('users').select('email').eq('id', user!.id).single();
-      const { error } = await supabase
-        .from('sales')
-        .update({ 
-          status: 'approved', 
-          incentive_amount: parseFloat(incentiveAmount),
-          transaction_id: transactionId,
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id,
-          approved_by_email: adminData?.email || user?.email
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-      await logActivity('Approve Sale', `Approved sale for ${sale?.product_name} (₹${incentiveAmount} incentive)`);
-      setSale(prev => prev ? { ...prev, status: 'approved', incentive_amount: incentiveAmount } : null);
-      showAlert({
-        title: 'Sale Approved',
-        message: `Incentive of ₹${incentiveAmount} has been successfully assigned.`,
-        severity: 'success'
-      });
-    } catch (err) {
-      setError('Failed to approve sale');
-      console.error(err);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleReject = async () => {
-    const confirmed = await showConfirm({
-      title: 'Reject Sale?',
-      message: 'Are you sure you want to reject this sale? This action cannot be undone.',
-      severity: 'warning'
-    });
-    if (!confirmed) return;
-    
-    setProcessing(true);
-    setError(null);
-    try {
-      const { error } = await supabase
-        .from('sales')
-        .update({ status: 'rejected' })
-        .eq('id', id);
-
-      if (error) throw error;
-      await logActivity('Reject Sale', `Rejected sale for ${sale?.product_name}`);
-      setSale(prev => prev ? { ...prev, status: 'rejected' } : null);
-      showAlert({
-        title: 'Sale Rejected',
-        message: 'The sale has been rejected.',
-        severity: 'info'
-      });
-    } catch (err) {
-      setError('Failed to reject sale');
-    } finally {
-      setProcessing(false);
-    }
-  };
+  // Admin does not approve/reject sales.
+  // Approvers handle approvals; admin only handles payouts (mark paid) after approver approval.
 
   const handleMarkPaid = async () => {
     setProcessing(true);
@@ -163,6 +119,7 @@ export function SaleDetails() {
       const { error } = await supabase
         .from('sales')
         .update({ 
+          status: 'paid',
           payment_status: 'paid',
           transaction_id: transactionId || sale?.transaction_id,
           paid_at: new Date().toISOString(),
@@ -181,6 +138,84 @@ export function SaleDetails() {
       });
     } catch (err) {
       setError('Failed to mark as paid');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleNotifyApprover = async () => {
+    if (!sale) return;
+
+    if (!approver?.expo_push_token) {
+      showAlert({
+        title: 'No push token',
+        message: 'This approver has not enabled push notifications (no Expo push token found).',
+        severity: 'warning'
+      });
+      return;
+    }
+
+    const token = String(approver.expo_push_token);
+    const looksLikeExpoToken = token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken');
+    if (!looksLikeExpoToken) {
+      showAlert({
+        title: 'Invalid push token',
+        message: 'Stored push token does not look like a valid Expo push token.',
+        severity: 'warning'
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: 'Notify approver?',
+      message: `Send a push reminder to ${approver.full_name || approver.email || 'the approver'} for this pending sale?`,
+      severity: 'info'
+    });
+    if (!confirmed) return;
+
+    setProcessing(true);
+    try {
+      const payload = [
+        {
+          to: token,
+          title: 'Pending sale approval',
+          body: `${sale.product_name} submitted by ${sale.promoter_email} is waiting for your approval.`,
+          sound: 'default',
+          priority: 'high',
+          channelId: 'default',
+          data: {
+            type: 'sale_pending_approval',
+            sale_id: sale.id,
+          }
+        }
+      ];
+
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Push request failed (HTTP ${res.status})`);
+      }
+
+      await logActivity(
+        'Notify Approver',
+        `Sent push reminder to approver ${approver.email || approver.id} for sale ${sale.id}`
+      );
+
+      showAlert({
+        title: 'Notification sent',
+        message: 'A push reminder was sent to the approver.',
+        severity: 'success'
+      });
+    } catch (e: any) {
+      showAlert({
+        title: 'Failed to send',
+        message: e?.message || 'Could not send push notification.',
+        severity: 'error'
+      });
     } finally {
       setProcessing(false);
     }
@@ -228,7 +263,7 @@ export function SaleDetails() {
 
       {error && (
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 font-medium text-sm flex items-center">
-          <XCircle className="h-5 w-5 mr-3 flex-shrink-0" />
+          <XCircle className="h-5 w-5 mr-3 shrink-0" />
           {error}
         </div>
       )}
@@ -236,7 +271,7 @@ export function SaleDetails() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Sale Info Card */}
-          <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden overflow-visible">
+          <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden">
             <div className="px-8 py-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                 <div className="space-y-6">
@@ -322,7 +357,7 @@ export function SaleDetails() {
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-0.5">Verification Status</p>
                         <span className={`px-2.5 py-1 inline-flex text-[10px] leading-5 font-black rounded-full uppercase tracking-widest mt-1 ${
-                          sale.status === 'approved' || sale.status === 'paid' || sale.status === 'approver_approved'
+                          sale.status === 'approver_approved' || sale.status === 'paid'
                             ? 'bg-emerald-100 text-emerald-800'
                             : sale.status === 'rejected'
                             ? 'bg-rose-100 text-rose-800'
@@ -405,22 +440,41 @@ export function SaleDetails() {
                        />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                       <button
-                         onClick={handleReject}
-                         disabled={processing}
-                         className="px-4 py-3 bg-white border border-rose-100 text-rose-600 rounded-2xl font-bold text-sm hover:bg-rose-50 transition-all disabled:opacity-50"
-                       >
-                         Reject
-                       </button>
-                       <button
-                         onClick={handleApprove}
-                         disabled={processing}
-                         className="px-4 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 disabled:opacity-50"
-                       >
-                         {processing ? '...' : 'Approve'}
-                       </button>
-                    </div>
+                    {sale.status === 'pending' ? (
+                      <div className="space-y-3">
+                        <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 text-orange-800 text-sm font-semibold">
+                          Waiting for approver review. Admin cannot approve/reject sales.
+                        </div>
+
+                        <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                            Assigned Approver
+                          </p>
+                          {approver ? (
+                            <div className="space-y-1">
+                              <div className="text-sm font-bold text-gray-900">
+                                {approver.full_name || 'Approver'}
+                              </div>
+                              <div className="text-xs text-gray-600 font-medium">{approver.email || '—'}</div>
+                              <div className="text-xs text-gray-600 font-medium">
+                                Phone: {approver.phone_number || '—'}
+                              </div>
+                              <button
+                                onClick={handleNotifyApprover}
+                                disabled={processing}
+                                className="mt-3 w-full px-4 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 disabled:opacity-50"
+                              >
+                                Send Push Reminder
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-500 font-medium">
+                              No approver assigned to this promoter.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
@@ -432,7 +486,7 @@ export function SaleDetails() {
                     <div className="flex items-center justify-between">
                        <span className="text-sm font-medium text-gray-500">Current Status:</span>
                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                         sale.status === 'approved' || sale.status === 'paid'
+                         sale.status === 'approver_approved' || sale.status === 'paid'
                            ? 'bg-emerald-100 text-emerald-800'
                            : 'bg-rose-100 text-rose-800'
                        }`}>
@@ -448,8 +502,8 @@ export function SaleDetails() {
                   </div>
                 )}
 
-                {/* Show QR Code if Approved OR if Pending with an amount entered */}
-                {(sale.status === 'approved' || (sale.status === 'pending' && incentiveAmount)) && sale.payment_status !== 'paid' && (
+                {/* Show QR Code only when ready to pay */}
+                {(sale.status === 'approver_approved') && sale.payment_status !== 'paid' && (
                   <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 space-y-4">
                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Scan to Pay via UPI</p>
                     
@@ -495,7 +549,7 @@ export function SaleDetails() {
                   </div>
                 )}
 
-                {sale.status === 'approved' && sale.payment_status !== 'paid' && (
+                {sale.status === 'approver_approved' && sale.payment_status !== 'paid' && (
                   <button
                     onClick={handleMarkPaid}
                     disabled={processing}

@@ -40,7 +40,7 @@ export default function AdminDashboard() {
 
     const totalSalesCount = sales.length;
     const pendingCount = sales.filter((s) => s.status === "pending").length;
-    const approvedCount = sales.filter((s) => s.status === "approved" || s.status === "paid").length;
+    const approverApprovedCount = sales.filter((s) => s.status === "approver_approved").length;
     const paidCount = sales.filter((s) => s.payment_status === "paid").length;
 
     if (loading && !refreshing) {
@@ -65,13 +65,13 @@ export default function AdminDashboard() {
                 </View>
 
                 <View style={[styles.card, { borderLeftColor: "#ff9800" }]}>
-                    <Text style={styles.cardTitle}>Pending Approval</Text>
+                    <Text style={styles.cardTitle}>Waiting for Approver</Text>
                     <Text style={styles.cardValue}>{pendingCount}</Text>
                 </View>
 
                 <View style={[styles.card, { borderLeftColor: "#4caf50" }]}>
-                    <Text style={styles.cardTitle}>Total Approved</Text>
-                    <Text style={styles.cardValue}>{approvedCount}</Text>
+                    <Text style={styles.cardTitle}>Approved by Approver</Text>
+                    <Text style={styles.cardValue}>{approverApprovedCount}</Text>
                 </View>
 
                 <View style={[styles.card, { borderLeftColor: "#9c27b0" }]}>

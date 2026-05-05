@@ -107,7 +107,7 @@ export default function MySales() {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>You haven't uploaded any sales yet.</Text>
+                        <Text style={styles.emptyText}>You haven&apos;t uploaded any sales yet.</Text>
                     </View>
                 }
                 renderItem={({ item }) => (

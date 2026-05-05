@@ -22,6 +22,7 @@ export default function AllSales() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [activeTab, setActiveTab] = useState<"awaiting_approver" | "ready_to_pay" | "paid">("ready_to_pay");
 
     const fetchSales = async () => {
         try {
@@ -63,9 +64,16 @@ export default function AllSales() {
         fetchSales();
     };
 
+    const awaitingApprover = sales.filter((s) => s.status === "pending");
+    const readyToPay = sales.filter((s) => s.status === "approver_approved" && s.payment_status !== "paid");
+    const paid = sales.filter((s) => s.payment_status === "paid");
+
+    const filteredSales =
+        activeTab === "awaiting_approver" ? awaitingApprover : activeTab === "paid" ? paid : readyToPay;
+
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "approved": return "#4caf50";
+            case "approver_approved": return "#4caf50";
             case "rejected": return "#f44336";
             case "pending": return "#ff9800";
             default: return "#888";
@@ -82,13 +90,46 @@ export default function AllSales() {
 
     return (
         <View style={styles.container}>
+            <View style={styles.segmentContainer}>
+                <TouchableOpacity
+                    style={[styles.segmentButton, activeTab === "awaiting_approver" && styles.segmentButtonActive]}
+                    onPress={() => setActiveTab("awaiting_approver")}
+                >
+                    <Text style={[styles.segmentText, activeTab === "awaiting_approver" && styles.segmentTextActive]}>
+                        Awaiting Approver ({awaitingApprover.length})
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.segmentButton, activeTab === "ready_to_pay" && styles.segmentButtonActive]}
+                    onPress={() => setActiveTab("ready_to_pay")}
+                >
+                    <Text style={[styles.segmentText, activeTab === "ready_to_pay" && styles.segmentTextActive]}>
+                        Ready to Pay ({readyToPay.length})
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.segmentButton, activeTab === "paid" && styles.segmentButtonActive]}
+                    onPress={() => setActiveTab("paid")}
+                >
+                    <Text style={[styles.segmentText, activeTab === "paid" && styles.segmentTextActive]}>
+                        Paid ({paid.length})
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             <FlatList
-                data={sales}
+                data={filteredSales}
                 keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No sales have been submitted yet.</Text>
+                        <Text style={styles.emptyText}>
+                            {activeTab === "awaiting_approver"
+                                ? "No sales are waiting for approver review."
+                                : activeTab === "paid"
+                                ? "No paid sales yet."
+                                : "No sales are ready for payout yet."}
+                        </Text>
                     </View>
                 }
                 renderItem={({ item }) => (
@@ -134,6 +175,37 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f5f5f5",
+    },
+    segmentContainer: {
+        flexDirection: "row",
+        gap: 8,
+        paddingHorizontal: 15,
+        paddingTop: 12,
+        paddingBottom: 6,
+    },
+    segmentButton: {
+        flex: 1,
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    segmentButtonActive: {
+        borderColor: "#1976d2",
+        backgroundColor: "#e3f2fd",
+    },
+    segmentText: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#555",
+        textAlign: "center",
+    },
+    segmentTextActive: {
+        color: "#1976d2",
     },
     center: {
         flex: 1,
