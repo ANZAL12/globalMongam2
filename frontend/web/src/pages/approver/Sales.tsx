@@ -22,12 +22,31 @@ export default function ApproverSales() {
 
     const fetchSales = async () => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: promoters, error: promotersError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('role', 'promoter')
+                .eq('approver_id', user.id)
+                .eq('is_active', true);
+
+            if (promotersError) throw promotersError;
+
+            const promoterIds = (promoters || []).map((promoter: any) => promoter.id);
+            if (promoterIds.length === 0) {
+                setSales([]);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('sales')
                 .select(`
                     *,
                     promoter:users!promoter_id(email)
                 `)
+                .in('promoter_id', promoterIds)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -52,7 +71,8 @@ export default function ApproverSales() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'approver_approved':
-            case 'approved': return '#4caf50';
+            case 'approved':
+            case 'paid': return '#4caf50';
             case 'rejected': return '#f44336';
             case 'pending': return '#ff9800';
             default: return '#888';
@@ -68,12 +88,7 @@ export default function ApproverSales() {
     }
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
-            <div className="p-4 bg-white border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-800">Review Sales</h2>
-                <p className="text-sm text-gray-500">Sales from your assigned promoters</p>
-            </div>
-
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             {sales.length === 0 ? (
                 <div className="p-[40px] flex items-center justify-center">
                     <p className="text-[16px] text-[#888]">No sales found for review.</p>
@@ -89,6 +104,8 @@ export default function ApproverSales() {
                             <div className="flex flex-row justify-between mb-[5px]">
                                 <div>
                                     <h3 className="text-[18px] font-bold text-[#333]">{item.product_name}</h3>
+                                    {item.model_no && <p className="text-[14px] text-[#666] mt-[2px]">Model: {item.model_no}</p>}
+                                    {item.serial_no && <p className="text-[14px] text-[#666] mt-[2px]">Serial: {item.serial_no}</p>}
                                     <p className="text-[14px] text-[#666] mt-[2px]">Bill: {item.bill_no || 'N/A'}</p>
                                 </div>
                                 <span className="text-[18px] font-bold text-[#1976d2]">₹{item.bill_amount}</span>
@@ -105,8 +122,11 @@ export default function ApproverSales() {
                                         {item.status.replace('_', ' ')}
                                     </p>
                                 </div>
-                                <div className="text-right bg-indigo-50 px-3 py-1 rounded-full">
-                                    <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-tight">Review Case</p>
+                                <div className="text-right">
+                                    <p className="text-[12px] text-[#888] mb-[2px]">Date</p>
+                                    <p className="text-[14px] font-[600] text-[#555]">
+                                        {new Date(item.created_at).toLocaleDateString()}
+                                    </p>
                                 </div>
                             </div>
                         </div>

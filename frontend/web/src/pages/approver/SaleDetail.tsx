@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
-import { ArrowLeft, CheckCircle2, XCircle, Clock, MapPin, Phone, User, Receipt, IndianRupee } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Clock, MapPin, Phone, User, Receipt } from 'lucide-react';
 
 export default function ApproverSaleDetail() {
     const { id } = useParams();

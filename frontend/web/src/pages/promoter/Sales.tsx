@@ -13,6 +13,7 @@ type Sale = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    transaction_id?: string | null;
     paid_by_email?: string | null;
     approved_by_email?: string | null;
 };
@@ -28,7 +29,7 @@ export default function PromoterSales() {
 
             const { data, error } = await supabase
                 .from('sales')
-                .select('id, product_name, model_no, serial_no, bill_no, bill_amount, status, incentive_amount, payment_status, created_at, approved_by_email, paid_by_email')
+                .select('id, product_name, model_no, serial_no, bill_no, bill_amount, status, incentive_amount, payment_status, created_at, transaction_id, approved_by_email, paid_by_email')
                 .eq('promoter_id', user.id)
                 .order('created_at', { ascending: false });
                 
@@ -76,7 +77,7 @@ export default function PromoterSales() {
     }
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             {sales.length === 0 ? (
                 <div className="flex justify-center p-[40px] pt-[60px]">
                     <p className="text-[16px] text-[#888] text-center">You haven't uploaded any sales yet.</p>
@@ -136,6 +137,11 @@ export default function PromoterSales() {
                                     {item.paid_by_email && (
                                         <p className="text-[10px] text-[#1976d2] mt-[2px] italic">
                                             By: {item.paid_by_email}
+                                        </p>
+                                    )}
+                                    {item.transaction_id && (
+                                        <p className="text-[11px] text-[#1976d2] font-bold mt-[2px]">
+                                            Txn ID: {item.transaction_id}
                                         </p>
                                     )}
                                 </div>

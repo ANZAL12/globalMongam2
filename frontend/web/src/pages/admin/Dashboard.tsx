@@ -31,7 +31,7 @@ export default function AdminDashboard() {
 
     const totalSalesCount = sales.length;
     const pendingCount = sales.filter((s) => s.status === 'pending').length;
-    const approvedCount = sales.filter((s) => s.status === 'approved' || s.status === 'paid').length;
+    const approverApprovedCount = sales.filter((s) => s.status === 'approver_approved').length;
     const paidCount = sales.filter((s) => s.payment_status === 'paid').length;
 
     if (loading) {
@@ -55,14 +55,14 @@ export default function AdminDashboard() {
 
                 {/* Pending */}
                 <div className="bg-white p-[20px] rounded-[10px] shadow-[0_5px_5px_rgba(0,0,0,0.1)] border-l-[5px] border-l-[#ff9800]">
-                    <h2 className="text-[16px] text-[#666] mb-[5px]">Pending Approval</h2>
+                    <h2 className="text-[16px] text-[#666] mb-[5px]">Waiting for Approver</h2>
                     <p className="text-[28px] font-bold text-[#333]">{pendingCount}</p>
                 </div>
 
                 {/* Approved */}
                 <div className="bg-white p-[20px] rounded-[10px] shadow-[0_5px_5px_rgba(0,0,0,0.1)] border-l-[5px] border-l-[#4caf50]">
-                    <h2 className="text-[16px] text-[#666] mb-[5px]">Total Approved</h2>
-                    <p className="text-[28px] font-bold text-[#333]">{approvedCount}</p>
+                    <h2 className="text-[16px] text-[#666] mb-[5px]">Approved by Approver</h2>
+                    <p className="text-[28px] font-bold text-[#333]">{approverApprovedCount}</p>
                 </div>
 
                 {/* Paid */}

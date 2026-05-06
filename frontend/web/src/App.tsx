@@ -15,6 +15,9 @@ import AdminAddPromoter from './pages/admin/AddPromoter';
 import AdminLogs from './pages/admin/Logs';
 import ApproverSales from './pages/approver/Sales';
 import ApproverSaleDetail from './pages/approver/SaleDetail';
+import ApproverDashboard from './pages/approver/Dashboard';
+import ApproverAddPromoter from './pages/approver/AddPromoter';
+import PromoterAnnouncementDetail from './pages/promoter/AnnouncementDetail';
 import { useEffect, useState } from 'react';
 import { supabase } from './services/supabase';
 
@@ -106,6 +109,7 @@ function App() {
         <Route path="add-sale" element={<PromoterUploadSale />} />
         <Route path="sales" element={<PromoterSales />} />
         <Route path="announcements" element={<PromoterAnnouncements />} />
+        <Route path="details/:id" element={<PromoterAnnouncementDetail />} />
       </Route>
 
       {/* Approver Routes */}
@@ -114,9 +118,10 @@ function App() {
           <Layout />
         </ProtectedRoute>
       }>
-        <Route index element={<ApproverSales />} />
+        <Route index element={<ApproverDashboard />} />
         <Route path="sales" element={<ApproverSales />} />
         <Route path="sale/:id" element={<ApproverSaleDetail />} />
+        <Route path="add-promoter" element={<ApproverAddPromoter />} />
       </Route>
     </Routes>
   );

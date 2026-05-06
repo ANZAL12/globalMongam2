@@ -20,6 +20,7 @@ export default function AdminSales() {
     const navigate = useNavigate();
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'awaiting_approver' | 'ready_to_pay' | 'paid'>('ready_to_pay');
 
     const fetchSales = async () => {
         try {
@@ -52,6 +53,7 @@ export default function AdminSales() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
+            case 'approver_approved':
             case 'approved': return '#4caf50';
             case 'rejected': return '#f44336';
             case 'pending': return '#ff9800';
@@ -67,15 +69,49 @@ export default function AdminSales() {
         );
     }
 
+    const awaitingApprover = sales.filter((s) => s.status === 'pending');
+    const readyToPay = sales.filter((s) => s.status === 'approver_approved' && s.payment_status !== 'paid');
+    const paid = sales.filter((s) => s.payment_status === 'paid');
+    const filteredSales = activeTab === 'awaiting_approver' ? awaitingApprover : activeTab === 'paid' ? paid : readyToPay;
+    const emptyText = activeTab === 'awaiting_approver'
+        ? 'No sales are waiting for approver review.'
+        : activeTab === 'paid'
+            ? 'No paid sales yet.'
+            : 'No sales are ready for payout yet.';
+
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
-            {sales.length === 0 ? (
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
+            <div className="flex gap-2 px-[15px] pt-[12px] pb-[6px]">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('awaiting_approver')}
+                    className={`flex-1 bg-white border p-[10px] rounded-[10px] text-[11px] font-bold text-center ${activeTab === 'awaiting_approver' ? 'border-[#1976d2] bg-[#e3f2fd] text-[#1976d2]' : 'border-[#e5e7eb] text-[#555]'}`}
+                >
+                    Awaiting Approver ({awaitingApprover.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('ready_to_pay')}
+                    className={`flex-1 bg-white border p-[10px] rounded-[10px] text-[11px] font-bold text-center ${activeTab === 'ready_to_pay' ? 'border-[#1976d2] bg-[#e3f2fd] text-[#1976d2]' : 'border-[#e5e7eb] text-[#555]'}`}
+                >
+                    Ready to Pay ({readyToPay.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('paid')}
+                    className={`flex-1 bg-white border p-[10px] rounded-[10px] text-[11px] font-bold text-center ${activeTab === 'paid' ? 'border-[#1976d2] bg-[#e3f2fd] text-[#1976d2]' : 'border-[#e5e7eb] text-[#555]'}`}
+                >
+                    Paid ({paid.length})
+                </button>
+            </div>
+
+            {filteredSales.length === 0 ? (
                 <div className="p-[40px] flex items-center justify-center">
-                    <p className="text-[16px] text-[#888]">No sales have been submitted yet.</p>
+                    <p className="text-[16px] text-[#888] text-center">{emptyText}</p>
                 </div>
             ) : (
                 <div className="flex flex-col">
-                    {sales.map((item) => (
+                    {filteredSales.map((item) => (
                         <div
                             key={item.id}
                             onClick={() => navigate(`/admin/sale/${item.id}`)}

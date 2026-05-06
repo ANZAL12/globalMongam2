@@ -13,6 +13,7 @@ export default function AdminAddPromoter() {
         shop_name: '',
         phone_number: '',
         gpay_number: '',
+        upi_id: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -25,44 +26,38 @@ export default function AdminAddPromoter() {
         e.preventDefault();
         setError('');
 
-        if (!formData.email || !formData.password || !formData.full_name || !formData.shop_name) {
-            setError('Please fill in all required fields.');
+        if (!formData.email || !formData.password || !formData.full_name || !formData.shop_name || !formData.phone_number || !formData.gpay_number || !formData.upi_id) {
+            setError('Please fill in all fields, including GPay Number and UPI ID.');
+            return;
+        }
+
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters long.');
             return;
         }
 
         setLoading(true);
         try {
-            // Note: In a real app, creating users from an admin dashboard requires a service_role key
-            // or an Edge Function to avoid logging out the admin. For standard client setup, we use signUp.
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: formData.email,
-                password: formData.password,
+            const { data: rpcData, error: rpcError } = await supabase.rpc('admin_create_promoter', {
+                p_email: formData.email.trim().toLowerCase(),
+                p_password: formData.password.trim(),
+                p_full_name: formData.full_name.trim(),
+                p_shop_name: formData.shop_name.trim(),
+                p_phone_number: formData.phone_number.trim(),
+                p_gpay_number: formData.gpay_number.trim(),
+                p_upi_id: formData.upi_id.trim()
             });
 
-            if (authError) throw authError;
-
-            if (authData.user) {
-                // Insert into our custom users table
-                const { error: dbError } = await supabase.from('users').insert([{
-                    id: authData.user.id,
-                    email: formData.email,
-                    role: 'promoter',
-                    full_name: formData.full_name,
-                    shop_name: formData.shop_name,
-                    phone_number: formData.phone_number,
-                    gpay_number: formData.gpay_number,
-                    is_active: true
-                }]);
-
-                if (dbError) throw dbError;
-
-                // Log the action
-                await logAdminAction(
-                    ActionFlag.ADDITION,
-                    `Promoter: ${formData.full_name}`,
-                    `Created account for ${formData.email} (${formData.shop_name})`
-                );
+            if (rpcError) throw rpcError;
+            if (rpcData && rpcData.error) {
+                throw new Error(rpcData.error);
             }
+
+            await logAdminAction(
+                ActionFlag.ADDITION,
+                `Promoter: ${formData.full_name}`,
+                `Created account for ${formData.email} (${formData.shop_name})`
+            );
 
             navigate('/admin/promoters');
         } catch (err: any) {
@@ -74,7 +69,7 @@ export default function AdminAddPromoter() {
     };
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             <div className="bg-white p-[20px] m-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)]">
                 <div className="flex items-center mb-[20px] pb-[10px] border-b border-[#eee]">
                     <button
@@ -133,7 +128,7 @@ export default function AdminAddPromoter() {
                         className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2]"
                     />
 
-                    <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Phone Number (Optional)</label>
+                    <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Phone Number *</label>
                     <input
                         type="text"
                         name="phone_number"
@@ -143,13 +138,23 @@ export default function AdminAddPromoter() {
                         className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2]"
                     />
 
-                    <label className="text-[16px] font-[600] mb-[8px] text-[#333]">GPay Number (Optional)</label>
+                    <label className="text-[16px] font-[600] mb-[8px] text-[#333]">GPay Number *</label>
                     <input
                         type="text"
                         name="gpay_number"
                         value={formData.gpay_number}
                         onChange={handleChange}
                         placeholder="e.g. +1234567890"
+                        className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2]"
+                    />
+
+                    <label className="text-[16px] font-[600] mb-[8px] text-[#333]">UPI ID *</label>
+                    <input
+                        type="text"
+                        name="upi_id"
+                        value={formData.upi_id}
+                        onChange={handleChange}
+                        placeholder="username@upi"
                         className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[30px] bg-[#fafafa] outline-none focus:border-[#1976d2]"
                     />
 

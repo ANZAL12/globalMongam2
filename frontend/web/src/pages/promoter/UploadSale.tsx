@@ -104,7 +104,12 @@ export default function PromoterUploadSale() {
                 payment_status: 'unpaid'
             }]);
 
-            if (insertError) throw insertError;
+            if (insertError) {
+                if (insertError.code === '23505') {
+                    throw new Error('This bill number has already been used. Please check the number.');
+                }
+                throw insertError;
+            }
 
             alert('Sale uploaded successfully!');
             setProductName('');
@@ -114,17 +119,20 @@ export default function PromoterUploadSale() {
             setBillAmount('');
             setImageFile(null);
             setImagePreview(null);
-            navigate('/promoter');
+            navigate('/promoter/sales');
         } catch (error: any) {
             console.error('Upload failed', error);
-            alert(`Submission Error: ${error.message || "We encountered a problem while uploading your sale."}`);
+            const title = error.message?.includes('already used') || error.message?.includes('already exists')
+                ? 'Duplicate Bill'
+                : 'Submission Error';
+            alert(`${title}: ${error.message || "We encountered a problem while uploading your sale."}`);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="flex-1 bg-white min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-white min-h-full">
             <form onSubmit={handleSubmit} className="p-[20px] flex flex-col">
 
                 <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Product Name *</label>

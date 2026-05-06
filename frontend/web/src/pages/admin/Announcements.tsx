@@ -228,7 +228,7 @@ export default function AdminAnnouncements() {
     }
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             {isFormVisible ? (
                 <div className="bg-white p-[20px] m-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)]">
                     <div className="flex justify-between items-center mb-[20px] pb-[10px] border-b border-[#eee]">

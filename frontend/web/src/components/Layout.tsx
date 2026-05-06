@@ -17,15 +17,16 @@ export default function Layout() {
     const navItems = role === 'admin'
         ? [
             { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-            { name: 'All Sales', path: '/admin/sales', icon: List },
-            { name: 'Announcements', path: '/admin/announcements', icon: BellRing },
+            { name: 'Payouts', path: '/admin/sales', icon: List },
+            { name: 'New Announcement', path: '/admin/announcements', icon: BellRing },
             { name: 'Promoters', path: '/admin/promoters', icon: Users },
             { name: 'Logs', path: '/admin/logs', icon: Activity }
         ]
         : role === 'approver'
             ? [
                 { name: 'Dashboard', path: '/approver', icon: LayoutDashboard },
-                { name: 'Review Sales', path: '/approver/sales', icon: List }
+                { name: 'Review Sales', path: '/approver/sales', icon: List },
+                { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle }
             ]
         : role === 'promoter'
             ? [
@@ -37,12 +38,12 @@ export default function Layout() {
             : [];
 
     return (
-        <div className="flex justify-center min-h-[100dvh] bg-[#f5f5f5]">
+        <div className="flex justify-center h-[100dvh] overflow-hidden bg-[#f5f5f5]">
             {/* Main App Container enforcing a mobile aspect ratio on desktop */}
-            <div className="w-full max-w-md bg-[#f5f5f5] min-h-[100dvh] flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
+            <div className="w-full max-w-md bg-[#f5f5f5] h-full min-h-0 flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
 
                 {/* Mobile Header matching `headerShown: true` from expo-router */}
-                <header className="flex items-center justify-between px-4 h-20 bg-white border-b border-gray-200 shadow-sm">
+                <header className="flex shrink-0 items-center justify-between px-4 h-20 bg-white border-b border-gray-200 shadow-sm">
                     <div className="relative h-20 w-48 overflow-hidden">
                         <img src="/logo.png" alt="Global Agencies Logo" className="absolute left-[0px] top-[65%] -translate-y-1/2 h-20 scale-[2.2] object-contain origin-left" />
                     </div>
@@ -52,19 +53,19 @@ export default function Layout() {
                 </header>
 
                 {/* Main View Area */}
-                <main className="flex-1 overflow-y-auto">
+                <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                     <Outlet />
                 </main>
 
                 {/* Bottom Navigation matching `<Tabs>` */}
-                <nav className="bg-white border-t border-gray-200 pb-safe z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                <nav className="shrink-0 bg-white border-t border-gray-200 pb-safe z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-around items-center h-[60px] px-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             let isActive = false;
 
                             // Exact match for dashboard
-                            if (item.path === '/admin' || item.path === '/promoter') {
+                            if (item.path === '/admin' || item.path === '/promoter' || item.path === '/approver') {
                                 isActive = location.pathname === item.path;
                             } else {
                                 // Prefix match for sub-routes

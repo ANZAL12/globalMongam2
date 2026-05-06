@@ -119,7 +119,7 @@ export default function AdminPromoterDetail() {
     }
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             {/* Custom Header for detail view */}
             <div className="bg-[#1976d2] pt-[20px] pb-[20px] px-[20px] flex items-center shadow-md">
                 <button

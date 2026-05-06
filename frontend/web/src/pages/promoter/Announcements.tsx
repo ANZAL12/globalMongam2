@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
 type Announcement = {
@@ -10,38 +11,43 @@ type Announcement = {
 };
 
 export default function PromoterAnnouncements() {
+    const navigate = useNavigate();
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isBlocked, setIsBlocked] = useState(false);
 
     const fetchAnnouncements = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Fetch announcements. This is tricky due to target relationships.
-            // Ideal logic: If there are targets for an announcement, check if the current user is in them.
-            // Since RLS should handle this, or we fallback to fetching all and filtering, or querying properly.
-            // A simple approach is to query announcements and its targets. RLS is better, but for now we'll do:
+            const { data: userData } = await supabase
+                .from('users')
+                .select('is_active')
+                .eq('id', user.id)
+                .single();
+
+            if (userData && userData.is_active === false) {
+                setIsBlocked(true);
+                setAnnouncements([]);
+                return;
+            }
+
+            setIsBlocked(false);
+
             const { data, error } = await supabase
                 .from('announcements')
                 .select(`
                     *,
-                    announcement_targets!left (
+                    announcement_targets!inner (
                         user_id
                     )
                 `)
+                .eq('announcement_targets.user_id', user.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            // Filter out announcements that have targets but don't include the current user
-            const validAnnouncements = (data || []).filter((ann: any) => {
-                const targets = ann.announcement_targets || [];
-                if (targets.length === 0) return true; // Targeted to all
-                return targets.some((t: any) => t.user_id === user.id);
-            });
-
-            setAnnouncements(validAnnouncements);
+            setAnnouncements(data || []);
         } catch (error) {
             console.error('Failed to fetch announcements', error);
         } finally {
@@ -50,7 +56,24 @@ export default function PromoterAnnouncements() {
     };
 
     useEffect(() => {
+        const channel = supabase
+            .channel('realtime_announcements')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'announcement_targets' },
+                (payload) => {
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user && payload.new.user_id === user.id) fetchAnnouncements();
+                    });
+                }
+            )
+            .subscribe();
+
         fetchAnnouncements();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     if (loading) {
@@ -61,8 +84,20 @@ export default function PromoterAnnouncements() {
         );
     }
 
+    if (isBlocked) {
+        return (
+            <div className="flex flex-1 flex-col justify-center items-center h-full bg-[#f5f5f5] p-5 text-center">
+                <div className="text-[48px] text-[#d32f2f] mb-4">!</div>
+                <h2 className="text-[20px] font-bold text-[#d32f2f] mb-2">Access Blocked</h2>
+                <p className="text-[16px] text-[#555]">
+                    Your account has been blocked. You can no longer view announcements. Please contact the administrator for more information.
+                </p>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px]">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full">
             {announcements.length === 0 ? (
                 <div className="flex justify-center p-[40px] pt-[60px]">
                     <p className="text-[16px] text-[#888] text-center">No announcements available.</p>
@@ -70,7 +105,12 @@ export default function PromoterAnnouncements() {
             ) : (
                 <div className="pt-[15px]">
                     {announcements.map((item) => (
-                        <div key={item.id} className="bg-white mx-[15px] mb-[15px] p-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)]">
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => navigate(`/promoter/details/${item.id}`)}
+                            className="block w-[calc(100%-30px)] text-left bg-white mx-[15px] mb-[15px] p-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)]"
+                        >
                             <h3 className="text-[20px] font-bold text-[#333] mb-[5px]">{item.title}</h3>
                             <p className="text-[12px] text-[#888] mb-[10px]">
                                 {new Date(item.created_at).toLocaleDateString()}
@@ -85,10 +125,13 @@ export default function PromoterAnnouncements() {
                                 />
                             )}
 
-                            <p className="text-[16px] text-[#555] leading-[24px]">
+                            <p className="text-[16px] text-[#555] leading-[24px] line-clamp-3">
                                 {item.description}
                             </p>
-                        </div>
+                            <div className="mt-[10px] flex justify-end text-[#1976d2] text-[14px] font-bold">
+                                Read more
+                            </div>
+                        </button>
                     ))}
                 </div>
             )}

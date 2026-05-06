@@ -50,7 +50,7 @@ export default function AdminPromoters() {
     }
 
     return (
-        <div className="flex-1 bg-[#f5f5f5] min-h-[calc(100vh-130px)] pb-[80px] relative">
+        <div className="flex-1 bg-[#f5f5f5] min-h-full relative">
             <div className="p-[15px]">
                 <h1 className="text-[24px] font-bold mb-[20px] text-[#333]">Registered Promoters</h1>
 

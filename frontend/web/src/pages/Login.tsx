@@ -8,7 +8,7 @@ type PendingLogin = {
     role: string;
 };
 
-const ALLOWED_ROLES = new Set(['admin', 'promoter']);
+const ALLOWED_ROLES = new Set(['admin', 'promoter', 'approver']);
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -57,11 +57,9 @@ export default function Login() {
     const finalizeLogin = (accessToken: string, role: string) => {
         localStorage.setItem('access', accessToken);
         localStorage.setItem('role', role);
-        if (role === 'admin') {
-            navigate('/admin');
-        } else {
-            navigate('/promoter');
-        }
+        if (role === 'admin') navigate('/admin');
+        else if (role === 'approver') navigate('/approver');
+        else navigate('/promoter');
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -101,7 +99,7 @@ export default function Login() {
 
             if (!ALLOWED_ROLES.has(userData.role)) {
                 await supabase.auth.signOut();
-                throw new Error('Access denied. Only registered admins and promoters can sign in.');
+                throw new Error('Access denied. Only registered admins, approvers, and promoters can sign in.');
             }
 
             if (userData.must_change_password) {
@@ -148,7 +146,7 @@ export default function Login() {
 
             if (!ALLOWED_ROLES.has(userData.role)) {
                 await supabase.auth.signOut();
-                throw new Error('Access denied. Only registered admins and promoters can sign in.');
+                throw new Error('Access denied. Only registered admins, approvers, and promoters can sign in.');
             }
 
             if (userData.must_change_password) {
