@@ -26,7 +26,8 @@ export default function Layout() {
             ? [
                 { name: 'Dashboard', path: '/approver', icon: LayoutDashboard },
                 { name: 'Review Sales', path: '/approver/sales', icon: List },
-                { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle }
+                { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle },
+                { name: 'Announcements', path: '/approver/announcements', icon: Megaphone }
             ]
         : role === 'promoter'
             ? [

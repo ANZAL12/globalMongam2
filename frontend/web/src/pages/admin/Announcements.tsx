@@ -7,16 +7,17 @@ type Announcement = {
     title: string;
     description: string;
     image_url: string | null;
-    target_promoters: string[];
-    target_promoter_emails: string[];
+    target_users: string[];
+    target_user_emails: string[];
     created_at: string;
 };
 
-type Promoter = {
+type TargetUser = {
     id: string;
     email: string;
     full_name: string;
-    shop_name: string;
+    shop_name: string | null;
+    role: 'promoter' | 'approver';
 };
 
 export default function AdminAnnouncements() {
@@ -30,23 +31,26 @@ export default function AdminAnnouncements() {
     const [content, setContent] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [targetPromoters, setTargetPromoters] = useState<string[]>([]);
-    const [promoters, setPromoters] = useState<Promoter[]>([]);
+    const [targetUsers, setTargetUsers] = useState<string[]>([]);
+    const [targetableUsers, setTargetableUsers] = useState<TargetUser[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchPromoters = async () => {
+    const fetchTargetableUsers = async () => {
         try {
             const { data, error } = await supabase
                 .from('users')
-                .select('*')
-                .eq('role', 'promoter');
+                .select('id, email, full_name, shop_name, role')
+                .in('role', ['promoter', 'approver'])
+                .eq('is_active', true)
+                .order('role', { ascending: true })
+                .order('full_name', { ascending: true });
             if (error) throw error;
-            setPromoters(data || []);
+            setTargetableUsers(data || []);
         } catch (err) {
-            console.error('Failed to fetch promoters', err);
+            console.error('Failed to fetch target users', err);
         }
     };
 
@@ -67,8 +71,8 @@ export default function AdminAnnouncements() {
             
             const formatted = (data || []).map((ann: any) => ({
                 ...ann,
-                target_promoters: ann.announcement_targets?.map((t: any) => t.users?.id) || [],
-                target_promoter_emails: ann.announcement_targets?.map((t: any) => t.users?.email) || [],
+                target_users: ann.announcement_targets?.map((t: any) => t.users?.id).filter(Boolean) || [],
+                target_user_emails: ann.announcement_targets?.map((t: any) => t.users?.email).filter(Boolean) || [],
             }));
             setAnnouncements(formatted);
         } catch (err) {
@@ -80,7 +84,7 @@ export default function AdminAnnouncements() {
 
     useEffect(() => {
         fetchAnnouncements();
-        fetchPromoters();
+        fetchTargetableUsers();
     }, []);
 
     const resetForm = () => {
@@ -88,7 +92,7 @@ export default function AdminAnnouncements() {
         setContent('');
         setImageFile(null);
         setImagePreview(null);
-        setTargetPromoters([]);
+        setTargetUsers([]);
         setSearchQuery('');
         setEditingId(null);
         setError('');
@@ -105,7 +109,7 @@ export default function AdminAnnouncements() {
         setTitle(announcement.title);
         setContent(announcement.description);
         setImagePreview(announcement.image_url ? announcement.image_url : null);
-        setTargetPromoters(announcement.target_promoters || []);
+        setTargetUsers(announcement.target_users || []);
         setSearchQuery('');
         setImageFile(null);
         setEditingId(announcement.id);
@@ -180,7 +184,6 @@ export default function AdminAnnouncements() {
                 
                 if (updateError) throw updateError;
                 
-                // Update targets: simplest way is to delete old and insert new
                 await supabase.from('announcement_targets').delete().eq('announcement_id', editingId);
             } else {
                 const { data: newAnn, error: createError } = await supabase
@@ -195,18 +198,28 @@ export default function AdminAnnouncements() {
                 
                 if (createError) throw createError;
                 announcementId = newAnn.id;
+
+                // Replace trigger-created defaults with the exact audience selected here.
+                await supabase.from('announcement_targets').delete().eq('announcement_id', announcementId);
             }
 
-            if (targetPromoters.length > 0 && announcementId) {
-                const targetsData = targetPromoters.map(userId => ({
+            if (announcementId) {
+                const selectedTargetIds = targetUsers.length > 0
+                    ? targetUsers
+                    : targetableUsers.map((user) => user.id);
+
+                const targetsData = selectedTargetIds.map(userId => ({
                     announcement_id: announcementId,
                     user_id: userId
                 }));
-                const { error: targetError } = await supabase
-                    .from('announcement_targets')
-                    .insert(targetsData);
-                
-                if (targetError) throw targetError;
+
+                if (targetsData.length > 0) {
+                    const { error: targetError } = await supabase
+                        .from('announcement_targets')
+                        .upsert(targetsData);
+                    
+                    if (targetError) throw targetError;
+                }
             }
 
             resetForm();
@@ -264,11 +277,11 @@ export default function AdminAnnouncements() {
                             className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] h-[120px] resize-none"
                         />
 
-                        <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Target Promoters (Optional)</label>
-                        <p className="text-[12px] text-[#666] mb-[8px]">Click multiple to select. Deselect all to notify everyone.</p>
+                        <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Target Users (Optional)</label>
+                        <p className="text-[12px] text-[#666] mb-[8px]">Click multiple to select promoters or approvers. Deselect all to notify everyone.</p>
                         <input
                             type="text"
-                            placeholder="Search promoters by name, email, or shop..."
+                            placeholder="Search users by name, email, role, or shop..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="border border-[#ccc] rounded-[8px] p-[10px] text-[14px] mb-[10px] bg-[#fafafa] outline-none focus:border-[#1976d2] w-full"
@@ -276,33 +289,35 @@ export default function AdminAnnouncements() {
                         <div className="flex overflow-x-auto pb-2 mb-4 gap-2 scrollbar-thin scrollbar-thumb-gray-300">
                             <button
                                 type="button"
-                                onClick={() => setTargetPromoters([])}
-                                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border ${(!targetPromoters || targetPromoters.length === 0)
+                                onClick={() => setTargetUsers([])}
+                                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border ${(!targetUsers || targetUsers.length === 0)
                                         ? 'bg-[#1976d2] text-white border-[#1976d2]'
                                         : 'bg-white text-[#666] border-[#ccc] hover:bg-gray-50'
                                     }`}
                             >
-                                All Promoters
+                                All Users
                             </button>
-                            {promoters.filter(p => {
-                                const name = p.full_name || '';
-                                const email = p.email || '';
-                                const shop = p.shop_name || '';
+                            {targetableUsers.filter(user => {
+                                const name = user.full_name || '';
+                                const email = user.email || '';
+                                const shop = user.shop_name || '';
+                                const role = user.role || '';
                                 const query = searchQuery.toLowerCase();
                                 return name.toLowerCase().includes(query) ||
                                     email.toLowerCase().includes(query) ||
+                                    role.toLowerCase().includes(query) ||
                                     shop.toLowerCase().includes(query);
-                            }).map((p) => {
-                                const isSelected = (targetPromoters || []).includes(p.id);
+                            }).map((user) => {
+                                const isSelected = (targetUsers || []).includes(user.id);
                                 return (
                                     <button
-                                        key={p.id}
+                                        key={user.id}
                                         type="button"
                                         onClick={() => {
                                             if (isSelected) {
-                                                setTargetPromoters((prev) => prev.filter(id => id !== p.id));
+                                                setTargetUsers((prev) => prev.filter(id => id !== user.id));
                                             } else {
-                                                setTargetPromoters((prev) => [...(prev || []), p.id]);
+                                                setTargetUsers((prev) => [...(prev || []), user.id]);
                                             }
                                         }}
                                         className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors border ${isSelected
@@ -310,7 +325,7 @@ export default function AdminAnnouncements() {
                                                 : 'bg-white text-[#666] border-[#ccc] hover:bg-gray-50'
                                             }`}
                                     >
-                                        {p.full_name || p.email}
+                                        {user.full_name || user.email} <span className="opacity-70">({user.role})</span>
                                     </button>
                                 );
                             })}
@@ -383,7 +398,7 @@ export default function AdminAnnouncements() {
                                     <h3 className="text-[20px] font-bold text-[#333] pr-[80px] mb-[5px]">{item.title}</h3>
                                     <p className="text-[12px] text-[#888] mb-[10px]">
                                         {new Date(item.created_at).toLocaleDateString()}
-                                        {item.target_promoter_emails && item.target_promoter_emails.length > 0 && ` • Targets: ${item.target_promoter_emails.join(', ')}`}
+                                        {item.target_user_emails && item.target_user_emails.length > 0 && ` • Targets: ${item.target_user_emails.join(', ')}`}
                                     </p>
 
                                     {item.image_url && (
