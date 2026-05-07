@@ -267,13 +267,12 @@ export function Announcements({ targetRole }: AnnouncementPageProps) {
           : targetUsers.map(user => user.id)
       ));
 
-      if (announcementId && targetUsers.length > 0) {
-        const currentAudienceIds = targetUsers.map(user => user.id);
-        await supabase
+      if (announcementId) {
+        const { error: deleteTargetsError } = await supabase
           .from('announcement_targets')
           .delete()
-          .eq('announcement_id', announcementId)
-          .in('user_id', currentAudienceIds);
+          .eq('announcement_id', announcementId);
+        if (deleteTargetsError) throw deleteTargetsError;
       }
 
       if (announcementId && targetIds.length > 0) {

@@ -10,6 +10,7 @@ export default function ApproverSaleDetail() {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [duplicateCount, setDuplicateCount] = useState(0);
+    const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
 
     const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
@@ -38,14 +39,21 @@ export default function ApproverSaleDetail() {
                 if (serialKey) {
                     const { data: duplicateSales, error: duplicateError } = await supabase
                         .from('sales')
-                        .select('id, serial_no')
+                        .select('id, serial_no, created_at')
                         .ilike('serial_no', data.serial_no.trim());
 
                     if (duplicateError) throw duplicateError;
                     const duplicateMatches = (duplicateSales || []).filter((row: any) => normalizeSerial(row.serial_no) === serialKey);
                     setDuplicateCount(duplicateMatches.length);
+                    const latestDuplicate = [...duplicateMatches].sort((a: any, b: any) => {
+                        const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                        if (timeDiff !== 0) return timeDiff;
+                        return String(b.id).localeCompare(String(a.id));
+                    })[0];
+                    setIsLatestDuplicate(duplicateMatches.length > 1 && latestDuplicate?.id === data.id);
                 } else {
                     setDuplicateCount(0);
+                    setIsLatestDuplicate(false);
                 }
             } catch (err) {
                 console.error('Error fetching sale details:', err);
@@ -118,7 +126,7 @@ export default function ApproverSaleDetail() {
                     <StatusIcon size={24} />
                     <span className="font-bold uppercase tracking-wide">{statusInfo.text}</span>
                 </div>
-                {duplicateCount > 1 && (
+                {duplicateCount > 1 && isLatestDuplicate && (
                     <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200">
                         <span className="font-bold uppercase tracking-wide text-sm">
                             Duplicate Serial Alert
@@ -126,6 +134,16 @@ export default function ApproverSaleDetail() {
                         <p className="text-sm font-semibold mt-1">
                             This serial number already exists in {duplicateCount - 1} other uploaded sale(s).
                         </p>
+                        <button
+                            onClick={() =>
+                                navigate(
+                                    `/approver/sale/duplicates?serial=${encodeURIComponent(sale.serial_no || '')}&currentSaleId=${sale.id}`
+                                )
+                            }
+                            className="mt-3 px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-red-700 transition-colors"
+                        >
+                            View All Matching Sales
+                        </button>
                     </div>
                 )}
 

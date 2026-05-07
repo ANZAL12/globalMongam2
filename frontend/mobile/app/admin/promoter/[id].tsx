@@ -167,9 +167,16 @@ export default function PromoterDetailScreen() {
                 </View>
                 <View style={styles.row}>
                     <Text style={styles.label}>Payment Status:</Text>
-                    <Text style={[styles.value, item.payment_status === 'paid' ? styles.paidText : styles.unpaidText]}>
-                        {item.payment_status.toUpperCase()}
-                    </Text>
+                    <View style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <Text style={[styles.value, item.payment_status === 'paid' ? styles.paidText : styles.unpaidText]}>
+                            {item.payment_status.toUpperCase()}
+                        </Text>
+                        {item.payment_status === 'paid' && item.paid_at && (
+                            <Text style={[styles.dateText, { textAlign: 'right', marginTop: 2, fontSize: 12 }]}>
+                                {new Date(item.paid_at).toLocaleDateString()}
+                            </Text>
+                        )}
+                    </View>
                 </View>
             </View>
             <Text style={styles.dateText}>{new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString()}</Text>

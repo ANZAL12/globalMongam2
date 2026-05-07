@@ -14,6 +14,7 @@ import { AddApprover } from './pages/approvers/AddApprover';
 import { ApproverDetails } from './pages/approvers/ApproverDetails';
 import { SalesList } from './pages/sales/SalesList';
 import { SaleDetails } from './pages/sales/SaleDetails';
+import { DuplicateSerialSales } from './pages/sales/DuplicateSerialSales';
 import { ApproverAnnouncements, PromoterAnnouncements } from './pages/announcements/Announcements';
 import { Logs } from './pages/logs/Logs';
 import { MediaLibrary } from './pages/MediaLibrary';
@@ -41,6 +42,7 @@ function App() {
             <Route path="/approvers/:id" element={<ApproverDetails />} />
             <Route path="/sales" element={<SalesList />} />
             <Route path="/sales/:id" element={<SaleDetails />} />
+            <Route path="/sales/duplicates" element={<DuplicateSerialSales />} />
             <Route path="/announcements" element={<Navigate to="/announcements/promoters" replace />} />
             <Route path="/announcements/promoters" element={<PromoterAnnouncements />} />
             <Route path="/announcements/approvers" element={<ApproverAnnouncements />} />

@@ -18,6 +18,7 @@ type SaleDetail = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    paid_at?: string | null;
     transaction_id: string | null;
     promoter_phone: string | null;
     promoter_gpay: string | null;
@@ -202,7 +203,14 @@ export default function SaleDetailScreen() {
                     </View>
                     <View>
                         <Text style={styles.label}>Payment Status</Text>
-                        <Text style={styles.value}>{sale.payment_status.toUpperCase()}</Text>
+                        <View>
+                            <Text style={styles.value}>{sale.payment_status.toUpperCase()}</Text>
+                            {sale.payment_status === 'paid' && sale.paid_at && (
+                                <Text style={[styles.value, { fontSize: 12, color: '#999', marginTop: 4 }]}>
+                                    {new Date(sale.paid_at).toLocaleDateString()}
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 </View>
 

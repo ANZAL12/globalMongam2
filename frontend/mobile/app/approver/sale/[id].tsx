@@ -40,6 +40,7 @@ export default function ApproverSaleDetailScreen() {
   const [processing, setProcessing] = useState(false);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [duplicateCount, setDuplicateCount] = useState(0);
+  const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
   const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || "";
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function ApproverSaleDetailScreen() {
       if (serialKey) {
         const { data: duplicateSales, error: duplicateError } = await supabase
           .from("sales")
-          .select("id, serial_no")
+          .select("id, serial_no, created_at")
           .ilike("serial_no", (data as any).serial_no.trim());
 
         if (duplicateError) throw duplicateError;
@@ -81,8 +82,15 @@ export default function ApproverSaleDetailScreen() {
           (row: any) => normalizeSerial(row.serial_no) === serialKey
         );
         setDuplicateCount(duplicateMatches.length);
+        const latestDuplicate = [...duplicateMatches].sort((a: any, b: any) => {
+          const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.id).localeCompare(String(a.id));
+        })[0];
+        setIsLatestDuplicate(duplicateMatches.length > 1 && latestDuplicate?.id === (data as any).id);
       } else {
         setDuplicateCount(0);
+        setIsLatestDuplicate(false);
       }
     } catch (error) {
       console.error("Failed to fetch sale:", error);
@@ -160,12 +168,26 @@ export default function ApproverSaleDetailScreen() {
           {sale.status.replace("_", " ").toUpperCase()}
         </Text>
       </View>
-      {duplicateCount > 1 ? (
+      {duplicateCount > 1 && isLatestDuplicate ? (
         <View style={styles.duplicateBanner}>
           <Text style={styles.duplicateTitle}>DUPLICATE SERIAL ALERT</Text>
           <Text style={styles.duplicateMessage}>
             This serial number already exists in {duplicateCount - 1} other uploaded sale(s).
           </Text>
+          <TouchableOpacity
+            style={styles.duplicateActionButton}
+            onPress={() =>
+              router.push({
+                pathname: "/approver/sale/duplicates",
+                params: {
+                  serial: sale.serial_no || "",
+                  currentSaleId: sale.id,
+                },
+              })
+            }
+          >
+            <Text style={styles.duplicateActionText}>View All Matching Sales</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -318,6 +340,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     fontWeight: "600",
+  },
+  duplicateActionButton: {
+    marginTop: 10,
+    backgroundColor: "#c62828",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  duplicateActionText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   statusText: {
     fontWeight: "bold",

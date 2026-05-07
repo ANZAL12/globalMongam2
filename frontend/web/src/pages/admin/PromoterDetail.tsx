@@ -217,9 +217,16 @@ export default function AdminPromoterDetail() {
                                 </div>
                                 <div className="flex flex-row justify-between mb-[5px]">
                                     <p className="text-[14px] text-[#777]">Payment Status:</p>
-                                    <p className={`text-[14px] font-[500] uppercase ${item.payment_status === 'paid' ? 'text-[#2e7d32]' : 'text-[#d32f2f]'}`}>
-                                        {item.payment_status}
-                                    </p>
+                                    <div className="flex flex-col items-end">
+                                        <p className={`text-[14px] font-[500] uppercase ${item.payment_status === 'paid' ? 'text-[#2e7d32]' : 'text-[#d32f2f]'}`}>
+                                            {item.payment_status}
+                                        </p>
+                                        {item.payment_status === 'paid' && item.paid_at && (
+                                            <p className="text-[11px] text-[#999] mt-[2px]">
+                                                {new Date(item.paid_at).toLocaleDateString()}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

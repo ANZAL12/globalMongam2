@@ -305,6 +305,11 @@ export function PromoterDetails() {
                       }`}>
                         {sale.payment_status}
                       </span>
+                      {sale.payment_status === 'paid' && sale.paid_at && (
+                        <span className="text-gray-500 ml-2">
+                          • {new Date(sale.paid_at).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
 
                     <div className="ml-auto flex items-center text-[10px] space-x-1.5">

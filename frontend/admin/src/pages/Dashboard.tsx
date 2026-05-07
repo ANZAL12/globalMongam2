@@ -8,9 +8,10 @@ import {
   CreditCard,
   ArrowUpRight
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -140,7 +141,11 @@ export function Dashboard() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-100 italic-none">
               {sales.slice(0, 5).map((sale) => (
-                <tr key={sale.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/sales/${sale.id}`}>
+                <tr
+                  key={sale.id}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/sales/${sale.id}`)}
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.promoter_email}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.product_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{sale.bill_amount}</td>

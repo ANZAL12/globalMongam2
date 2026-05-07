@@ -10,6 +10,7 @@ export type Sale = {
   incentive_amount: string | null;
   payment_status: 'pending' | 'paid' | 'not_applicable';
   created_at: string;
+  paid_at?: string | null;
   promoter_email?: string;
   transaction_id?: string | null;
   promoter_phone?: string | null;

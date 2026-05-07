@@ -34,6 +34,8 @@ export function SaleDetails() {
   const { showAlert, showConfirm } = useModal();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
   const [approver, setApprover] = useState<{
     id: string;
     email: string | null;
@@ -41,6 +43,7 @@ export function SaleDetails() {
     phone_number: string | null;
     expo_push_token: string | null;
   } | null>(null);
+  const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
   useEffect(() => {
     async function fetchSale(isInitial = true) {
@@ -81,6 +84,25 @@ export function SaleDetails() {
         setSale(mappedResult);
         setIncentiveAmount(data.incentive_amount?.toString() || '');
         setTransactionId(data.transaction_id || '');
+        const serialKey = normalizeSerial(data.serial_no);
+        if (serialKey) {
+          const { data: duplicateSales, error: duplicateError } = await supabase
+            .from('sales')
+            .select('id, serial_no, created_at')
+            .ilike('serial_no', data.serial_no.trim());
+          if (duplicateError) throw duplicateError;
+          const duplicateMatches = (duplicateSales || []).filter((row: any) => normalizeSerial(row.serial_no) === serialKey);
+          setDuplicateCount(duplicateMatches.length);
+          const latestDuplicate = [...duplicateMatches].sort((a: any, b: any) => {
+            const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return String(b.id).localeCompare(String(a.id));
+          })[0];
+          setIsLatestDuplicate(duplicateMatches.length > 1 && latestDuplicate?.id === data.id);
+        } else {
+          setDuplicateCount(0);
+          setIsLatestDuplicate(false);
+        }
 
         const approverId = data.promoter?.approver_id as string | null | undefined;
         if (approverId) {
@@ -288,6 +310,26 @@ export function SaleDetails() {
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 font-medium text-sm flex items-center">
           <XCircle className="h-5 w-5 mr-3 shrink-0" />
           {error}
+        </div>
+      )}
+      {duplicateCount > 1 && isLatestDuplicate && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest">Duplicate Serial Alert</p>
+            <p className="text-sm font-semibold mt-1">
+              This serial number is already used in {duplicateCount - 1} other uploaded sale(s).
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              navigate(
+                `/sales/duplicates?serial=${encodeURIComponent(sale.serial_no || '')}&currentSaleId=${sale.id}`
+              )
+            }
+            className="shrink-0 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-rose-700 transition-colors"
+          >
+            View All Matching Sales
+          </button>
         </div>
       )}
 
@@ -584,9 +626,16 @@ export function SaleDetails() {
                 )}
 
                 {sale.payment_status === 'paid' && (
-                  <div className="flex items-center justify-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-700 font-bold text-sm">
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Incentive Disbursement Complete
+                  <div className="flex flex-col items-center justify-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-700 font-bold text-sm space-y-2">
+                    <div className="flex items-center">
+                      <CheckCircle2 className="h-5 w-5 mr-2" />
+                      Incentive Disbursement Complete
+                    </div>
+                    {sale.paid_at && (
+                      <div className="text-xs font-medium text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">
+                        Paid on {new Date(sale.paid_at).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 )}
              </div>

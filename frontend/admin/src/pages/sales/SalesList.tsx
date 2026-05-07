@@ -17,6 +17,7 @@ type SalesListItem = Omit<Sale, 'status'> & {
   status: Sale['status'] | 'approver_approved';
   promoter_email?: string | null;
   approver_name?: string | null;
+  has_duplicate_serial?: boolean;
 };
 
 export function SalesList() {
@@ -28,6 +29,16 @@ export function SalesList() {
   const initialStatus = searchParams.get('status') || 'all';
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const navigate = useNavigate();
+  const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
+  const getLatestSaleId = (items: any[]) => {
+    if (items.length === 0) return '';
+    return [...items]
+      .sort((a, b) => {
+        const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return String(b.id).localeCompare(String(a.id));
+      })[0]?.id;
+  };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
@@ -59,10 +70,27 @@ export function SalesList() {
 
         if (error) throw error;
 
+        const serialCounts = new Map<string, number>();
+        const serialGroups = new Map<string, any[]>();
+        for (const sale of data || []) {
+          const serialKey = normalizeSerial(sale.serial_no);
+          if (!serialKey) continue;
+          serialCounts.set(serialKey, (serialCounts.get(serialKey) || 0) + 1);
+          serialGroups.set(serialKey, [...(serialGroups.get(serialKey) || []), sale]);
+        }
+
         const mappedSales = (data || []).map((sale: any) => ({
           ...sale,
           promoter_email: sale.promoter?.email || 'Unknown',
           approver_name: sale.approver?.full_name || sale.approver?.email || null,
+          has_duplicate_serial: (() => {
+            const serialKey = normalizeSerial(sale.serial_no);
+            if (!serialKey) return false;
+            const isDuplicateSerial = (serialCounts.get(serialKey) || 0) > 1;
+            if (!isDuplicateSerial) return false;
+            const latestId = getLatestSaleId(serialGroups.get(serialKey) || []);
+            return sale.id === latestId;
+          })(),
         }));
 
         setSales(mappedSales);
@@ -237,6 +265,11 @@ export function SalesList() {
                       <div>
                         <div className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{sale.product_name}</div>
                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Bill: {sale.bill_no || 'N/A'}</div>
+                        {sale.has_duplicate_serial && (
+                          <div className="text-[10px] text-rose-700 font-bold uppercase tracking-wide mt-1">
+                            Duplicate serial detected
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>

@@ -22,6 +22,15 @@ export default function ApproverSales() {
     const [loading, setLoading] = useState(true);
 
     const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
+    const getLatestSaleId = (items: any[]) => {
+        if (items.length === 0) return '';
+        return [...items]
+            .sort((a, b) => {
+                const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                if (timeDiff !== 0) return timeDiff;
+                return String(b.id).localeCompare(String(a.id));
+            })[0]?.id;
+    };
 
     const fetchSales = async () => {
         try {
@@ -56,15 +65,17 @@ export default function ApproverSales() {
 
             const { data: allSerials, error: allSerialsError } = await supabase
                 .from('sales')
-                .select('serial_no');
+                .select('id, serial_no, created_at');
 
             if (allSerialsError) throw allSerialsError;
 
             const serialCounts = new Map<string, number>();
+            const serialGroups = new Map<string, any[]>();
             for (const sale of allSerials || []) {
                 const serialKey = normalizeSerial(sale.serial_no);
                 if (!serialKey) continue;
                 serialCounts.set(serialKey, (serialCounts.get(serialKey) || 0) + 1);
+                serialGroups.set(serialKey, [...(serialGroups.get(serialKey) || []), sale]);
             }
 
             const formattedSales = (data || []).map((sale: any) => ({
@@ -72,7 +83,11 @@ export default function ApproverSales() {
                 promoter_email: sale.promoter?.email || 'Unknown',
                 has_duplicate_serial: (() => {
                     const serialKey = normalizeSerial(sale.serial_no);
-                    return serialKey ? (serialCounts.get(serialKey) || 0) > 1 : false;
+                    if (!serialKey) return false;
+                    const isDuplicateSerial = (serialCounts.get(serialKey) || 0) > 1;
+                    if (!isDuplicateSerial) return false;
+                    const latestId = getLatestSaleId(serialGroups.get(serialKey) || []);
+                    return sale.id === latestId;
                 })(),
             }));
 

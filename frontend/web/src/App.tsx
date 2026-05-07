@@ -15,6 +15,7 @@ import AdminAddPromoter from './pages/admin/AddPromoter';
 import AdminLogs from './pages/admin/Logs';
 import ApproverSales from './pages/approver/Sales';
 import ApproverSaleDetail from './pages/approver/SaleDetail';
+import DuplicateSerialSales from './pages/approver/DuplicateSerialSales';
 import ApproverDashboard from './pages/approver/Dashboard';
 import ApproverAddPromoter from './pages/approver/AddPromoter';
 import ApproverAnnouncements from './pages/approver/Announcements';
@@ -131,6 +132,7 @@ function App() {
         <Route index element={<ApproverDashboard />} />
         <Route path="sales" element={<ApproverSales />} />
         <Route path="sale/:id" element={<ApproverSaleDetail />} />
+        <Route path="sale/duplicates" element={<DuplicateSerialSales />} />
         <Route path="add-promoter" element={<ApproverAddPromoter />} />
         <Route path="announcements" element={<ApproverAnnouncements />} />
         <Route path="details/:id" element={<ApproverAnnouncementDetail />} />

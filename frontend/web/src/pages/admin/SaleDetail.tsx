@@ -190,7 +190,14 @@ export default function AdminSaleDetail() {
                         </div>
                         <div className="text-right">
                             <p className="text-[12px] text-[#888] mb-[4px]">Payment Status</p>
-                            <p className="text-[16px] text-[#333] font-[600] uppercase">{sale.payment_status}</p>
+                            <div>
+                                <p className="text-[16px] text-[#333] font-[600] uppercase">{sale.payment_status}</p>
+                                {sale.payment_status === 'paid' && sale.paid_at && (
+                                    <p className="text-[11px] text-[#999] mt-[4px]">
+                                        {new Date(sale.paid_at).toLocaleDateString()}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
