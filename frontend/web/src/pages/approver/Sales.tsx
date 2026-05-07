@@ -13,12 +13,15 @@ type Sale = {
     status: string;
     payment_status: string;
     created_at: string;
+    has_duplicate_serial?: boolean;
 };
 
 export default function ApproverSales() {
     const navigate = useNavigate();
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
     const fetchSales = async () => {
         try {
@@ -51,9 +54,26 @@ export default function ApproverSales() {
 
             if (error) throw error;
 
+            const { data: allSerials, error: allSerialsError } = await supabase
+                .from('sales')
+                .select('serial_no');
+
+            if (allSerialsError) throw allSerialsError;
+
+            const serialCounts = new Map<string, number>();
+            for (const sale of allSerials || []) {
+                const serialKey = normalizeSerial(sale.serial_no);
+                if (!serialKey) continue;
+                serialCounts.set(serialKey, (serialCounts.get(serialKey) || 0) + 1);
+            }
+
             const formattedSales = (data || []).map((sale: any) => ({
                 ...sale,
-                promoter_email: sale.promoter?.email || 'Unknown'
+                promoter_email: sale.promoter?.email || 'Unknown',
+                has_duplicate_serial: (() => {
+                    const serialKey = normalizeSerial(sale.serial_no);
+                    return serialKey ? (serialCounts.get(serialKey) || 0) > 1 : false;
+                })(),
             }));
 
             setSales(formattedSales);
@@ -106,6 +126,11 @@ export default function ApproverSales() {
                                     <h3 className="text-[18px] font-bold text-[#333]">{item.product_name}</h3>
                                     {item.model_no && <p className="text-[14px] text-[#666] mt-[2px]">Model: {item.model_no}</p>}
                                     {item.serial_no && <p className="text-[14px] text-[#666] mt-[2px]">Serial: {item.serial_no}</p>}
+                                    {item.has_duplicate_serial && (
+                                        <p className="text-[12px] text-[#c62828] mt-[4px] font-[600]">
+                                            Duplicate serial found in uploaded sales
+                                        </p>
+                                    )}
                                     <p className="text-[14px] text-[#666] mt-[2px]">Bill: {item.bill_no || 'N/A'}</p>
                                 </div>
                                 <span className="text-[18px] font-bold text-[#1976d2]">₹{item.bill_amount}</span>

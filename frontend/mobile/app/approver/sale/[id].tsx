@@ -39,6 +39,8 @@ export default function ApproverSaleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || "";
 
   useEffect(() => {
     fetchSaleDetails();
@@ -66,6 +68,22 @@ export default function ApproverSaleDetailScreen() {
 
       if (error) throw error;
       setSale(data as any);
+
+      const serialKey = normalizeSerial((data as any)?.serial_no);
+      if (serialKey) {
+        const { data: duplicateSales, error: duplicateError } = await supabase
+          .from("sales")
+          .select("id, serial_no")
+          .ilike("serial_no", (data as any).serial_no.trim());
+
+        if (duplicateError) throw duplicateError;
+        const duplicateMatches = (duplicateSales || []).filter(
+          (row: any) => normalizeSerial(row.serial_no) === serialKey
+        );
+        setDuplicateCount(duplicateMatches.length);
+      } else {
+        setDuplicateCount(0);
+      }
     } catch (error) {
       console.error("Failed to fetch sale:", error);
       Alert.alert("Error", "Could not load sale details.");
@@ -142,6 +160,14 @@ export default function ApproverSaleDetailScreen() {
           {sale.status.replace("_", " ").toUpperCase()}
         </Text>
       </View>
+      {duplicateCount > 1 ? (
+        <View style={styles.duplicateBanner}>
+          <Text style={styles.duplicateTitle}>DUPLICATE SERIAL ALERT</Text>
+          <Text style={styles.duplicateMessage}>
+            This serial number already exists in {duplicateCount - 1} other uploaded sale(s).
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
@@ -273,6 +299,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#eee",
+  },
+  duplicateBanner: {
+    backgroundColor: "#ffebee",
+    borderColor: "#ffcdd2",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  duplicateTitle: {
+    fontWeight: "bold",
+    fontSize: 12,
+    color: "#b71c1c",
+  },
+  duplicateMessage: {
+    color: "#c62828",
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: "600",
   },
   statusText: {
     fontWeight: "bold",

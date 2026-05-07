@@ -13,9 +13,15 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+type SalesListItem = Omit<Sale, 'status'> & {
+  status: Sale['status'] | 'approver_approved';
+  promoter_email?: string | null;
+  approver_name?: string | null;
+};
+
 export function SalesList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<SalesListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   

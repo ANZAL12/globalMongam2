@@ -13,6 +13,7 @@ type Sale = {
   bill_amount: string;
   status: string;
   created_at: string;
+  has_duplicate_serial?: boolean;
 };
 
 export default function ApproverSales() {
@@ -20,6 +21,7 @@ export default function ApproverSales() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || "";
 
   const fetchSales = async () => {
     try {
@@ -58,9 +60,26 @@ export default function ApproverSales() {
 
       if (error) throw error;
 
+      const { data: allSerials, error: allSerialsError } = await supabase
+        .from("sales")
+        .select("serial_no");
+
+      if (allSerialsError) throw allSerialsError;
+
+      const serialCounts = new Map<string, number>();
+      for (const sale of allSerials || []) {
+        const serialKey = normalizeSerial(sale.serial_no);
+        if (!serialKey) continue;
+        serialCounts.set(serialKey, (serialCounts.get(serialKey) || 0) + 1);
+      }
+
       const mappedSales = (data || []).map((sale: any) => ({
         ...sale,
         promoter_email: sale.promoter?.email || "Unknown",
+        has_duplicate_serial: (() => {
+          const serialKey = normalizeSerial(sale.serial_no);
+          return serialKey ? (serialCounts.get(serialKey) || 0) > 1 : false;
+        })(),
       }));
 
       setSales(mappedSales);
@@ -128,6 +147,9 @@ export default function ApproverSales() {
                 <Text style={styles.productName}>{item.product_name}</Text>
                 {item.model_no && <Text style={styles.metaText}>Model: {item.model_no}</Text>}
                 {item.serial_no && <Text style={styles.metaText}>Serial: {item.serial_no}</Text>}
+                {item.has_duplicate_serial && (
+                  <Text style={styles.duplicateSerialText}>Duplicate serial found in uploaded sales</Text>
+                )}
                 {item.bill_no && <Text style={styles.metaText}>Bill: {item.bill_no}</Text>}
               </View>
               <Text style={styles.billAmount}>₹{item.bill_amount}</Text>
@@ -189,6 +211,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 2,
+  },
+  duplicateSerialText: {
+    fontSize: 12,
+    color: "#c62828",
+    marginTop: 4,
+    fontWeight: "700",
   },
   billAmount: {
     fontSize: 18,

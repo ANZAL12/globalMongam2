@@ -9,6 +9,9 @@ export default function ApproverSaleDetail() {
     const [sale, setSale] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
+    const [duplicateCount, setDuplicateCount] = useState(0);
+
+    const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
     useEffect(() => {
         async function fetchSale() {
@@ -30,6 +33,20 @@ export default function ApproverSaleDetail() {
 
                 if (error) throw error;
                 setSale(data);
+
+                const serialKey = normalizeSerial(data?.serial_no);
+                if (serialKey) {
+                    const { data: duplicateSales, error: duplicateError } = await supabase
+                        .from('sales')
+                        .select('id, serial_no')
+                        .ilike('serial_no', data.serial_no.trim());
+
+                    if (duplicateError) throw duplicateError;
+                    const duplicateMatches = (duplicateSales || []).filter((row: any) => normalizeSerial(row.serial_no) === serialKey);
+                    setDuplicateCount(duplicateMatches.length);
+                } else {
+                    setDuplicateCount(0);
+                }
             } catch (err) {
                 console.error('Error fetching sale details:', err);
                 navigate('/approver/sales');
@@ -101,6 +118,16 @@ export default function ApproverSaleDetail() {
                     <StatusIcon size={24} />
                     <span className="font-bold uppercase tracking-wide">{statusInfo.text}</span>
                 </div>
+                {duplicateCount > 1 && (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200">
+                        <span className="font-bold uppercase tracking-wide text-sm">
+                            Duplicate Serial Alert
+                        </span>
+                        <p className="text-sm font-semibold mt-1">
+                            This serial number already exists in {duplicateCount - 1} other uploaded sale(s).
+                        </p>
+                    </div>
+                )}
 
                 {/* Product Card */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
