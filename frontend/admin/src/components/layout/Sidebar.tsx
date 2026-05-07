@@ -19,7 +19,8 @@ const navigation = [
   { name: 'Promoters', href: '/promoters', icon: Users },
   { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog },
   { name: 'Sales', href: '/sales', icon: ShoppingBag },
-  { name: 'Announcements', href: '/announcements', icon: Megaphone },
+  { name: 'Promoter Announcements', href: '/announcements/promoters', icon: Megaphone },
+  { name: 'Approver Announcements', href: '/announcements/approvers', icon: ShieldCheck },
   { name: 'Logs', href: '/logs', icon: FileText },
   { name: 'Media Library', href: '/media', icon: Image },
 ];
@@ -109,6 +110,14 @@ export function Sidebar() {
               );
             })}
           </nav>
+          <div className="px-4 py-4 border-t border-gray-100">
+            <p className="text-[11px] font-semibold text-gray-400 text-center tracking-wide">
+              Designed & Developed by Anzal
+            </p>
+            <p className="mt-1 text-[11px] font-medium text-gray-400 text-center">
+              Contact: 7306049755
+            </p>
+          </div>
         </div>
       </div>
     </div>

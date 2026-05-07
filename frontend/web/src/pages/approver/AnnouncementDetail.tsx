@@ -22,10 +22,19 @@ export default function ApproverAnnouncementDetail() {
             if (!id) return;
 
             try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
                 const { data, error } = await supabase
                     .from('announcements')
-                    .select('*')
+                    .select(`
+                        *,
+                        announcement_targets!inner (
+                            user_id
+                        )
+                    `)
                     .eq('id', id)
+                    .eq('announcement_targets.user_id', user.id)
                     .single();
 
                 if (error) throw error;

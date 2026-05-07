@@ -22,6 +22,7 @@ import ApproverAnnouncementDetail from './pages/approver/AnnouncementDetail';
 import PromoterAnnouncementDetail from './pages/promoter/AnnouncementDetail';
 import { useEffect, useState } from 'react';
 import { supabase } from './services/supabase';
+import { startForegroundPushListener, syncWebPushToken } from './services/firebaseMessaging';
 
 function ProtectedRoute({ children, allowedRole }: { children: JSX.Element, allowedRole: string }) {
   const token = localStorage.getItem('access');
@@ -70,6 +71,13 @@ function ProtectedRoute({ children, allowedRole }: { children: JSX.Element, allo
       mounted = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!token || checking || mustChangePassword || !role || role !== allowedRole || role === 'admin') return;
+
+    void syncWebPushToken();
+    void startForegroundPushListener();
+  }, [allowedRole, checking, mustChangePassword, role, token]);
 
   if (!token) return <Navigate to="/" replace />;
   if (checking) return null;

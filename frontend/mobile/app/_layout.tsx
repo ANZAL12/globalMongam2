@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { GoogleSignInProvider } from "../context/GoogleSignInProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
@@ -12,10 +12,17 @@ import * as WebBrowser from "expo-web-browser";
 WebBrowser.maybeCompleteAuthSession();
 const ALLOWED_ROLES = new Set(["admin", "promoter", "approver"]);
 
+type NotificationRouteData = {
+  type?: string;
+  announcement_id?: string;
+  sale_id?: string;
+};
+
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, mustChangePassword, logout } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [pendingNotificationData, setPendingNotificationData] = useState<NotificationRouteData | null>(null);
 
   // Re-sync whenever the user logs in or out
   useEffect(() => {
@@ -48,6 +55,39 @@ function RootLayoutNav() {
 
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      setPendingNotificationData(response.notification.request.content.data as NotificationRouteData);
+    });
+
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        setPendingNotificationData(response.notification.request.content.data as NotificationRouteData);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!role || !pendingNotificationData) return;
+
+    if (pendingNotificationData.type === 'announcement' && pendingNotificationData.announcement_id) {
+      if (role === 'approver') {
+        router.push(`/approver/details/${pendingNotificationData.announcement_id}` as any);
+      } else if (role === 'promoter') {
+        router.push(`/promoter/details/${pendingNotificationData.announcement_id}`);
+      }
+      setPendingNotificationData(null);
+      return;
+    }
+
+    if (pendingNotificationData.type === 'sale_pending_approval' && pendingNotificationData.sale_id && role === 'approver') {
+      router.push(`/approver/sale/${pendingNotificationData.sale_id}`);
+      setPendingNotificationData(null);
+    }
+  }, [pendingNotificationData, role, router]);
 
   useEffect(() => {
     if (isLoading) return;

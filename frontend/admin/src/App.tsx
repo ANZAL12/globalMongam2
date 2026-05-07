@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -14,7 +14,7 @@ import { AddApprover } from './pages/approvers/AddApprover';
 import { ApproverDetails } from './pages/approvers/ApproverDetails';
 import { SalesList } from './pages/sales/SalesList';
 import { SaleDetails } from './pages/sales/SaleDetails';
-import { Announcements } from './pages/announcements/Announcements';
+import { ApproverAnnouncements, PromoterAnnouncements } from './pages/announcements/Announcements';
 import { Logs } from './pages/logs/Logs';
 import { MediaLibrary } from './pages/MediaLibrary';
 
@@ -41,7 +41,9 @@ function App() {
             <Route path="/approvers/:id" element={<ApproverDetails />} />
             <Route path="/sales" element={<SalesList />} />
             <Route path="/sales/:id" element={<SaleDetails />} />
-            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/announcements" element={<Navigate to="/announcements/promoters" replace />} />
+            <Route path="/announcements/promoters" element={<PromoterAnnouncements />} />
+            <Route path="/announcements/approvers" element={<ApproverAnnouncements />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/media" element={<MediaLibrary />} />
           </Route>

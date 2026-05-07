@@ -51,6 +51,13 @@ export default function ApproverTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="announcements"
+        options={{
+          title: "Announcements",
+          tabBarIcon: ({ color }) => <MaterialIcons name="announcement" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="add-promoter"
         options={{
           title: "Add Promoter",
@@ -60,4 +67,3 @@ export default function ApproverTabLayout() {
     </Tabs>
   );
 }
-
