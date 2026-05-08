@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (user) {
                 await supabase
                     .from('users')
-                    .update({ expo_push_token: null })
+                    .update({ expo_push_token: null, fcm_web_push_token: null })
                     .eq('id', user.id);
             }
 
