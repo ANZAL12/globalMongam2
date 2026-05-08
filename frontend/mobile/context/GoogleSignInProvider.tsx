@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { Alert } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
 import { useRouter } from "expo-router";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../services/supabase";
@@ -30,16 +29,12 @@ export const useGoogleSignIn = () => useContext(GoogleSignInContext);
 export function GoogleSignInProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const { login, logout } = useAuth();
-    const redirectUri = makeRedirectUri({
-        scheme: "com.googleusercontent.apps.389146058293-s9rjophl6kkbu893v3b6lionf93pf2e6",
-        path: "oauthredirect",
-    });
 
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+        clientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
         webClientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
         androidClientId: "389146058293-s9rjophl6kkbu893v3b6lionf93pf2e6.apps.googleusercontent.com",
         iosClientId: "862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf.apps.googleusercontent.com",
-        redirectUri,
     });
 
     const handleGoogleLogin = useCallback(
