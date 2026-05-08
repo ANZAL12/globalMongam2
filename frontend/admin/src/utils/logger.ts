@@ -4,10 +4,10 @@ const LOG_RETENTION_DAYS = 7;
 const CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 let lastCleanupAt = 0;
 
-async function cleanupOldLogs() {
+export async function cleanupOldLogs(force = false) {
   const now = Date.now();
-  // Run cleanup at most once every 7 days per browser session.
-  if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+  // Run cleanup at most once every 7 days per browser session, unless forced.
+  if (!force && now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
   lastCleanupAt = now;
 
   const cutoff = new Date(now - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
