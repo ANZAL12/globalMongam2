@@ -6,7 +6,7 @@ import { useAuth } from "./AuthContext";
 import { supabase } from "../services/supabase";
 import { syncPushTokenToBackend } from "../services/notifications";
 
-const ALLOWED_ROLES = new Set(["admin", "promoter"]);
+const ALLOWED_ROLES = new Set(["admin", "promoter", "approver"]);
 
 type GoogleSignInContextType = {
     /** True when the Google auth request is ready for promptAsync */
@@ -33,7 +33,7 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
         webClientId: "862395033084-o6e5bpleh1t4ot99pbmius6gkrak9hnu.apps.googleusercontent.com",
-        androidClientId: "862395033084-cpvd7pe1q7hlsujb796mcdp25pf17kvf.apps.googleusercontent.com",
+        androidClientId: "389146058293-s9rjophl6kkbu893v3b6lionf93pf2e6.apps.googleusercontent.com",
         iosClientId: "862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf.apps.googleusercontent.com",
     });
 
@@ -65,7 +65,7 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
 
                 if (!ALLOWED_ROLES.has(userData.role)) {
                     await supabase.auth.signOut();
-                    throw new Error("Access denied. Only registered admins and promoters can sign in.");
+                    throw new Error("Access denied. Only registered admins, promoters, and approvers can sign in.");
                 }
 
                 await login(

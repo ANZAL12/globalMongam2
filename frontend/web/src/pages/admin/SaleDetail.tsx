@@ -18,6 +18,7 @@ type SaleDetail = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    paid_at: string | null;
     transaction_id: string | null;
     promoter_phone: string | null;
     promoter_gpay: string | null;

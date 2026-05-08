@@ -12,6 +12,7 @@ interface Sale {
     incentive_amount: string;
     payment_status: string;
     created_at: string;
+    paid_at?: string | null;
 }
 
 interface PromoterDetail {

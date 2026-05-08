@@ -48,7 +48,7 @@ export default function Login() {
 
             if (!ALLOWED_ROLES.has(userData.role)) {
                 await supabase.auth.signOut();
-                throw new Error('Access denied. Only registered admins and promoters can sign in.');
+                throw new Error('Access denied. Only registered admins, promoters, and approvers can sign in.');
             }
 
             await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);

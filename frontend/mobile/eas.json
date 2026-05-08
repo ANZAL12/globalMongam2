@@ -12,8 +12,8 @@
             "distribution": "internal",
             "env": {
                 "EXPO_PUBLIC_API_URL": "https://global-agencies-backend.onrender.com/api",
-                "EXPO_PUBLIC_SUPABASE_URL": "https://cjjewehmdqlxptkcowhw.supabase.co",
-                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqamV3ZWhtZHFseHB0a2Nvd2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDc4ODgsImV4cCI6MjA5MTMyMzg4OH0.COQz8rpLHTAy_JK75MR-v9OYrCP0DKCWB1LGQxSC_rQ",
+                "EXPO_PUBLIC_SUPABASE_URL": "https://zefsyngtxzqhjnylzlcg.supabase.co",
+                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZnN5bmd0eHpxaGpueWx6bGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDYxMzcsImV4cCI6MjA5MzQ4MjEzN30.yv8XT1oUQCRTUOBHI2fhxon_pyJ8eGrPnpdEIukirr4",
                 "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dd1kxaadg",
                 "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "ml_default"
             }
@@ -21,8 +21,8 @@
         "production": {
             "env": {
                 "EXPO_PUBLIC_API_URL": "https://global-agencies-backend.onrender.com/api",
-                "EXPO_PUBLIC_SUPABASE_URL": "https://cjjewehmdqlxptkcowhw.supabase.co",
-                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqamV3ZWhtZHFseHB0a2Nvd2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDc4ODgsImV4cCI6MjA5MTMyMzg4OH0.COQz8rpLHTAy_JK75MR-v9OYrCP0DKCWB1LGQxSC_rQ",
+                "EXPO_PUBLIC_SUPABASE_URL": "https://zefsyngtxzqhjnylzlcg.supabase.co",
+                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZnN5bmd0eHpxaGpueWx6bGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDYxMzcsImV4cCI6MjA5MzQ4MjEzN30.yv8XT1oUQCRTUOBHI2fhxon_pyJ8eGrPnpdEIukirr4",
                 "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dd1kxaadg",
                 "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "ml_default"
             }

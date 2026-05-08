@@ -100,55 +100,97 @@ serve(async (req) => {
 
     const { data: users, error: usersError } = await supabaseAdmin
       .from("users")
-      .select("id, role, fcm_web_push_token")
+      .select("id, role, fcm_web_push_token, expo_push_token")
       .in("id", targetIds);
 
     if (usersError) throw usersError;
 
-    const recipients = (users || []).filter((user) => user.fcm_web_push_token);
-    if (recipients.length === 0) {
-      return new Response(JSON.stringify({ sent: 0, skipped: targetIds.length }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // --- 1. Web Push (Firebase Cloud Messaging) ---
+    const webRecipients = (users || []).filter((user) => user.fcm_web_push_token);
+    
+    let webSuccessCount = 0;
+    let webFailureCount = 0;
 
-    const app = getFirebaseApp();
-    const messaging = getMessaging(app);
-    let successCount = 0;
-    let failureCount = 0;
+    if (webRecipients.length > 0) {
+      const app = getFirebaseApp();
+      const messaging = getMessaging(app);
 
-    for (const group of chunk(recipients, 500)) {
-      const messages = group.map((user) => {
-        const url = user.role === "approver"
-          ? `/approver/details/${announcementId}`
-          : `/promoter/details/${announcementId}`;
+      for (const group of chunk(webRecipients, 500)) {
+        const messages = group.map((user) => {
+          const url = user.role === "approver"
+            ? `/approver/details/${announcementId}`
+            : `/promoter/details/${announcementId}`;
 
-        return {
-          token: user.fcm_web_push_token as string,
-          notification: {
-            title: announcement.title || "New announcement",
-            body: (announcement.description || "You have a new announcement.").slice(0, 120),
-          },
-          webpush: {
-            fcmOptions: {
-              link: url,
+          return {
+            token: user.fcm_web_push_token as string,
+            notification: {
+              title: announcement.title || "New announcement",
+              body: (announcement.description || "You have a new announcement.").slice(0, 120),
             },
-          },
-          data: {
-            type: "announcement",
-            announcement_id: announcementId,
-            url,
-          },
-        };
-      });
+            webpush: {
+              fcmOptions: {
+                link: url,
+              },
+            },
+            data: {
+              type: "announcement",
+              announcement_id: announcementId,
+              url,
+            },
+          };
+        });
 
-      const response = await messaging.sendEach(messages);
+        const response = await messaging.sendEach(messages);
 
-      successCount += response.successCount;
-      failureCount += response.failureCount;
+        webSuccessCount += response.successCount;
+        webFailureCount += response.failureCount;
+      }
     }
 
-    return new Response(JSON.stringify({ sent: successCount, failed: failureCount }), {
+    // --- 2. Mobile Push (Expo Push Notifications) ---
+    const expoRecipients = (users || []).filter((user) => user.expo_push_token && (user.expo_push_token.startsWith('ExponentPushToken') || user.expo_push_token.startsWith('ExpoPushToken')));
+    let expoSuccessCount = 0;
+
+    if (expoRecipients.length > 0) {
+      const expoMessages = expoRecipients.map((user) => ({
+        to: user.expo_push_token,
+        title: announcement.title || "New announcement",
+        body: (announcement.description || "You have a new announcement.").slice(0, 120),
+        sound: "default",
+        priority: "high",
+        channelId: "default",
+        data: {
+          type: "announcement",
+          announcement_id: announcementId
+        }
+      }));
+
+      // Expo supports up to 100 messages per request
+      for (const group of chunk(expoMessages, 100)) {
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(group),
+        });
+        
+        if (response.ok) {
+           const resData = await response.json();
+           expoSuccessCount += resData.data ? resData.data.length : 0;
+        } else {
+           console.error('Expo Push Error:', await response.text());
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      web_sent: webSuccessCount, 
+      web_failed: webFailureCount,
+      expo_sent: expoSuccessCount 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

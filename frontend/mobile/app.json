@@ -1,24 +1,24 @@
 {
   "expo": {
     "name": "Global Agencies",
-    "slug": "global-agencies",
+    "slug": "global",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/GLOBAL2.png",
     "scheme": [
       "global-agencies",
-      "com.globalagencies.mobile",
-      "com.googleusercontent.apps.862395033084-cpvd7pe1q7hlsujb796mcdp25pf17kvf",
+      "com.globalagencies2.mobile",
+      "com.googleusercontent.apps.389146058293-s9rjophl6kkbu893v3b6lionf93pf2e6",
       "com.googleusercontent.apps.862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf"
     ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.globalagencies.mobile"
+      "bundleIdentifier": "com.globalagencies2.mobile"
     },
     "android": {
-      "package": "com.globalagencies.mobile",
+      "package": "com.globalagencies2.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/GLOBAL2_padded.png",
@@ -60,8 +60,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "ec0dc904-cf1d-4073-b1f3-14c658b50ec8"
+        "projectId": "04b08287-629b-4e36-b12c-d469080b1f02"
       }
-    }
+    },
+    "owner": "globalmongams-organization"
   }
 }
