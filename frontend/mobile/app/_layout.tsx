@@ -57,6 +57,62 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const subscribeToAnnouncementAssignments = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase
+        .channel(`announcement_targets_${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'announcement_targets',
+            filter: `user_id=eq.${user.id}`,
+          },
+          async (payload) => {
+            try {
+              const announcementId = payload.new?.announcement_id as string | undefined;
+              if (!announcementId) return;
+
+              const { data: announcement } = await supabase
+                .from('announcements')
+                .select('title, description')
+                .eq('id', announcementId)
+                .single();
+
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: announcement?.title || 'New announcement',
+                  body: (announcement?.description || 'You have a new announcement.').slice(0, 100),
+                  data: {
+                    type: 'announcement',
+                    announcement_id: announcementId,
+                  },
+                },
+                trigger: null,
+              });
+            } catch (error) {
+              console.error('Realtime local announcement notification failed:', error);
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    subscribeToAnnouncementAssignments();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       setPendingNotificationData(response.notification.request.content.data as NotificationRouteData);
     });

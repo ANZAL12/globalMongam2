@@ -8,6 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
+import { sendAnnouncementPushNotifications, sendAnnouncementPushViaFirebase } from "../../../services/notifications";
 
 type Announcement = {
     id: string;
@@ -244,13 +245,54 @@ export default function AdminAnnouncements() {
                 Alert.alert("Success", "Announcement posted!");
             }
 
-            // Insert targets if any
-            if (savedAnnouncementId && targetPromoters.length > 0) {
-                const targetInserts = targetPromoters.map(uid => ({
-                    announcement_id: savedAnnouncementId,
-                    user_id: uid
-                }));
-                await supabase.from('announcement_targets').insert(targetInserts);
+            // Always resolve concrete targets so announcements/push do not rely on DB-side defaults.
+            if (savedAnnouncementId) {
+                let resolvedTargets = targetPromoters;
+
+                if (resolvedTargets.length === 0) {
+                    const { data: allPromoters, error: allPromotersError } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('role', 'promoter')
+                        .eq('is_active', true);
+
+                    if (allPromotersError) throw allPromotersError;
+                    resolvedTargets = (allPromoters || []).map((p: { id: string }) => p.id);
+                }
+
+                if (resolvedTargets.length > 0) {
+                    const targetInserts = resolvedTargets.map(uid => ({
+                        announcement_id: savedAnnouncementId as string,
+                        user_id: uid
+                    }));
+                    const { error: insertTargetsError } = await supabase
+                        .from('announcement_targets')
+                        .insert(targetInserts);
+                    if (insertTargetsError) throw insertTargetsError;
+
+                    // Primary sender: Firebase Edge Function for mobile/web FCM routing.
+                    try {
+                        await sendAnnouncementPushViaFirebase({
+                            announcementId: savedAnnouncementId,
+                            targetUserIds: resolvedTargets,
+                        });
+                    } catch {
+                        // Fallback to Expo pipeline if Firebase function is not available/misconfigured.
+                        try {
+                            await sendAnnouncementPushNotifications({
+                                announcementId: savedAnnouncementId,
+                                title,
+                                description: content,
+                                targetUserIds: resolvedTargets,
+                            });
+                        } catch {
+                            Alert.alert(
+                                "Announcement posted",
+                                "Announcement was saved, but push delivery could not be confirmed for all promoters."
+                            );
+                        }
+                    }
+                }
             }
 
             resetForm();

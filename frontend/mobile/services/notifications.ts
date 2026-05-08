@@ -90,6 +90,40 @@ export async function registerForPushNotificationsAsync() {
     return token;
 }
 
+export async function registerForFirebasePushTokenAsync() {
+    if (!Device.isDevice) {
+        console.warn('FCM: SKIPPED (Not a physical device)');
+        return null;
+    }
+
+    try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+            console.warn('FCM: Permission DENIED by user!');
+            return null;
+        }
+
+        const devicePushToken = await Notifications.getDevicePushTokenAsync();
+        const token = typeof devicePushToken?.data === 'string' ? devicePushToken.data : null;
+        if (!token) {
+            console.warn('FCM: No native device push token returned');
+            return null;
+        }
+
+        console.log('FCM: SUCCESS! Native token acquired.');
+        return token;
+    } catch (error: any) {
+        console.error('FCM: Failed to fetch native token:', error?.message || error);
+        return null;
+    }
+}
+
 export const syncPushTokenToBackend = async () => {
     try {
         console.log('Push Sync: Checking authentication...');
@@ -100,28 +134,119 @@ export const syncPushTokenToBackend = async () => {
             return;
         }
 
-        console.log(`Push Sync: User found (${user.email}). Requesting token...`);
-        const token = await registerForPushNotificationsAsync();
-        
-        if (token) {
-            console.log('Push Sync: Token generated successfully:', token);
+        console.log(`Push Sync: User found (${user.email}). Requesting Expo/FCM tokens...`);
+        const expoToken = await registerForPushNotificationsAsync();
+        const fcmToken = await registerForFirebasePushTokenAsync();
+
+        if (expoToken || fcmToken) {
+            const updatePayload: Record<string, string> = {};
+            if (expoToken) updatePayload.expo_push_token = expoToken;
+            if (fcmToken) updatePayload.fcm_web_push_token = fcmToken;
+
             console.log('Push Sync: Updating Supabase users table...');
-            
             const { data, error } = await supabase
                 .from('users')
-                .update({ expo_push_token: token })
+                .update(updatePayload)
                 .eq('id', user.id)
                 .select();
 
             if (error) {
                 console.error('Push Sync: Supabase Update Error:', error.message);
             } else {
-                console.log('Push Sync: SUCCESS! Token saved to Supabase.', data);
+                console.log('Push Sync: SUCCESS! Tokens saved to Supabase.', data);
             }
         } else {
-            console.warn('Push Sync: Failed to generate a token. Are you on a physical device?');
+            console.warn('Push Sync: Failed to generate Expo/FCM token. Are you on a physical device?');
         }
     } catch (error: any) {
         console.error('Push Sync: Critical Error:', error.message || error);
     }
+};
+
+type SendAnnouncementPushParams = {
+    announcementId: string;
+    title: string;
+    description: string;
+    targetUserIds: string[];
+};
+
+export const sendAnnouncementPushNotifications = async ({
+    announcementId,
+    title,
+    description,
+    targetUserIds,
+}: SendAnnouncementPushParams) => {
+    try {
+        if (!targetUserIds.length) {
+            return { sent: 0, skipped: 0 };
+        }
+
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('id, expo_push_token')
+            .in('id', targetUserIds)
+            .eq('is_active', true);
+
+        if (error) throw error;
+
+        const recipients = (users || [])
+            .map((u) => u.expo_push_token)
+            .filter(
+                (token): token is string =>
+                    Boolean(token) &&
+                    (token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken'))
+            );
+
+        if (!recipients.length) {
+            return { sent: 0, skipped: targetUserIds.length };
+        }
+
+        const bodyText = (description || 'You have a new announcement.').slice(0, 100);
+        const messages = recipients.map((token) => ({
+            to: token,
+            title: title || 'New announcement',
+            body: bodyText,
+            sound: 'default',
+            priority: 'high',
+            channelId: 'default',
+            data: {
+                type: 'announcement',
+                announcement_id: announcementId,
+            },
+        }));
+
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(messages),
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Expo push API failed (${response.status}): ${text}`);
+        }
+
+        return { sent: recipients.length, skipped: Math.max(targetUserIds.length - recipients.length, 0) };
+    } catch (error) {
+        console.error('Push send failed:', error);
+        throw error;
+    }
+};
+
+export const sendAnnouncementPushViaFirebase = async ({
+    announcementId,
+    targetUserIds,
+}: {
+    announcementId: string;
+    targetUserIds: string[];
+}) => {
+    const { data, error } = await supabase.functions.invoke('send-web-announcement-push', {
+        body: {
+            announcementId,
+            targetIds: targetUserIds,
+        },
+    });
+
+    if (error) throw error;
+    return data;
 };
