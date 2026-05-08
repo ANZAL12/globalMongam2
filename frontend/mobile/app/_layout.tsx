@@ -2,7 +2,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { GoogleSignInProvider } from "../context/GoogleSignInProvider";
 import { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, AppState } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
 import { supabase } from "../services/supabase";
@@ -113,17 +113,38 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
+    const clearBadge = async () => {
+      try {
+        await Notifications.setBadgeCountAsync(0);
+      } catch (error) {
+        console.error('Failed to clear notification badge:', error);
+      }
+    };
+
+    void clearBadge();
+
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void clearBadge();
+      }
+    });
+
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      void clearBadge();
       setPendingNotificationData(response.notification.request.content.data as NotificationRouteData);
     });
 
     Notifications.getLastNotificationResponseAsync().then(response => {
+      void clearBadge();
       if (response) {
         setPendingNotificationData(response.notification.request.content.data as NotificationRouteData);
       }
     });
 
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      appStateSubscription.remove();
+    };
   }, []);
 
   useEffect(() => {

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { supabase } from "../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "../../../context/AuthContext";
 
 type Announcement = {
     id: string;
@@ -15,6 +16,7 @@ type Announcement = {
 export default function ApproverAnnouncementDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { logout } = useAuth();
     const [announcement, setAnnouncement] = useState<Announcement | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -70,13 +72,32 @@ export default function ApproverAnnouncementDetails() {
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
             <Stack.Screen
                 options={{
-                    headerTitle: "Announcement Details",
+                    headerTitle: "",
                     headerShown: true,
                     headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 10 }}>
-                            <MaterialIcons name="arrow-back" size={24} color="#333" />
+                        <View style={{ flexDirection: "row", alignItems: "center", marginLeft: 10 }}>
+                            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+                                <MaterialIcons name="arrow-back" size={24} color="#333" />
+                            </TouchableOpacity>
+                            <Image
+                                source={require("../../../assets/images/logo.png")}
+                                style={{ width: 70, height: 38, resizeMode: "contain" }}
+                            />
+                        </View>
+                    ),
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() =>
+                                Alert.alert("Logout", "Are you sure you want to logout?", [
+                                    { text: "Cancel", style: "cancel" },
+                                    { text: "Logout", onPress: logout, style: "destructive" },
+                                ])
+                            }
+                            style={{ marginRight: 15 }}
+                        >
+                            <MaterialIcons name="logout" size={24} color="#f00" />
                         </TouchableOpacity>
-                    )
+                    ),
                 }}
             />
 

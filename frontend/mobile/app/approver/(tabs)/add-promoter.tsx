@@ -4,6 +4,7 @@ import { supabase } from "../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ApproverAddPromoter() {
+  const placeholderColor = "#94a3b8";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -95,11 +96,12 @@ export default function ApproverAddPromoter() {
       <Text style={styles.title}>Add Promoter Request</Text>
       <Text style={styles.subtitle}>Submit promoter details for admin approval.</Text>
 
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor={placeholderColor} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
       <View style={styles.passwordRow}>
         <TextInput
           style={[styles.input, styles.passwordInput]}
           placeholder={'give initial password as "password"'}
+          placeholderTextColor={placeholderColor}
           secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
@@ -116,6 +118,7 @@ export default function ApproverAddPromoter() {
         <TextInput
           style={[styles.input, styles.passwordInput]}
           placeholder="Confirm Password"
+          placeholderTextColor={placeholderColor}
           secureTextEntry={!showConfirmPassword}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -128,12 +131,12 @@ export default function ApproverAddPromoter() {
           />
         </TouchableOpacity>
       </View>
-      <TextInput style={styles.input} placeholder="Full Name" value={fullName} onChangeText={setFullName} />
-      <TextInput style={styles.input} placeholder="Shop Name / Location" value={shopName} onChangeText={setShopName} />
-      <TextInput style={styles.input} placeholder="Phone Number" keyboardType="phone-pad" value={phoneNumber} onChangeText={setPhoneNumber} />
-      <TextInput style={styles.input} placeholder="GPay Number" keyboardType="phone-pad" value={gPayNumber} onChangeText={setGPayNumber} />
-      <TextInput style={styles.input} placeholder="UPI ID" autoCapitalize="none" value={upiId} onChangeText={setUpiId} />
-      <TextInput style={styles.input} placeholder="Confirm UPI ID" autoCapitalize="none" value={confirmUpiId} onChangeText={setConfirmUpiId} />
+      <TextInput style={styles.input} placeholder="Full Name" placeholderTextColor={placeholderColor} value={fullName} onChangeText={setFullName} />
+      <TextInput style={styles.input} placeholder="Shop Name / Location" placeholderTextColor={placeholderColor} value={shopName} onChangeText={setShopName} />
+      <TextInput style={styles.input} placeholder="Phone Number" placeholderTextColor={placeholderColor} keyboardType="phone-pad" value={phoneNumber} onChangeText={setPhoneNumber} />
+      <TextInput style={styles.input} placeholder="GPay Number" placeholderTextColor={placeholderColor} keyboardType="phone-pad" value={gPayNumber} onChangeText={setGPayNumber} />
+      <TextInput style={styles.input} placeholder="UPI ID" placeholderTextColor={placeholderColor} autoCapitalize="none" value={upiId} onChangeText={setUpiId} />
+      <TextInput style={styles.input} placeholder="Confirm UPI ID" placeholderTextColor={placeholderColor} autoCapitalize="none" value={confirmUpiId} onChangeText={setConfirmUpiId} />
 
       <TouchableOpacity style={[styles.submit, loading && styles.disabled]} onPress={handleSubmit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Send for Approval</Text>}
@@ -150,6 +153,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: "#666", marginBottom: 16 },
   input: {
     backgroundColor: "#fff",
+    color: "#111827",
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 10,
