@@ -9,6 +9,7 @@ import { PendingPromoterDetails } from './pages/promoters/PendingPromoterDetails
 import { PromoterDetails } from './pages/promoters/PromoterDetails';
 import { PromoterManage } from './pages/promoters/PromoterManage';
 import { EditPromoter } from './pages/promoters/EditPromoter';
+import { MyPromoters } from './pages/promoters/MyPromoters';
 import { ApproversList } from './pages/approvers/ApproversList';
 import { AddApprover } from './pages/approvers/AddApprover';
 import { ApproverDetails } from './pages/approvers/ApproverDetails';
@@ -20,17 +21,20 @@ import { Logs } from './pages/logs/Logs';
 import { MediaLibrary } from './pages/MediaLibrary';
 
 import { ModalProvider } from './context/ModalContext';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <ModalProvider>
-      <Router>
+    <AuthProvider>
+      <ModalProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           
           <Route element={<AdminLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/promoters" element={<PromotersList />} />
+            <Route path="/my-promoters" element={<MyPromoters />} />
             <Route path="/promoters/pending" element={<PendingPromoters />} />
             <Route path="/promoters/pending/:id" element={<PendingPromoterDetails />} />
             <Route path="/promoters/manage" element={<PromoterManage />} />
@@ -52,6 +56,7 @@ function App() {
         </Routes>
       </Router>
     </ModalProvider>
+  </AuthProvider>
   );
 }
 

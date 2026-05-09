@@ -134,6 +134,18 @@ export const syncPushTokenToBackend = async () => {
             return;
         }
 
+        // Check if user is active
+        const { data: profile } = await supabase
+            .from('users')
+            .select('is_active')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile?.is_active) {
+            console.log('Push Sync: User is not active. Skipping token sync.');
+            return;
+        }
+
         console.log(`Push Sync: User found (${user.email}). Requesting Expo/FCM tokens...`);
         const expoToken = await registerForPushNotificationsAsync();
         const fcmToken = await registerForFirebasePushTokenAsync();

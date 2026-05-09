@@ -8,32 +8,11 @@ export default function ApproverTabLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         tabBarHideOnKeyboard: true,
-        headerLeft: () => (
-          <View style={{ marginLeft: 30, marginTop: 20, justifyContent: "center", height: "100%", width: 100 }}>
-            <Image
-              source={require("../../../assets/images/logo.png")}
-              style={{ width: "100%", height: "100%", resizeMode: "contain", transform: [{ scale: 2.1 }] }}
-            />
-          </View>
-        ),
-        headerTitle: "",
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={() =>
-              Alert.alert("Logout", "Are you sure you want to logout?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Logout", onPress: logout, style: "destructive" },
-              ])
-            }
-            style={{ marginRight: 15 }}
-          >
-            <MaterialIcons name="logout" size={24} color="#f00" />
-          </TouchableOpacity>
-        ),
+        headerShown: false,
         tabBarActiveTintColor: "#1976d2",
-        headerShown: true,
       }}
     >
       <Tabs.Screen
@@ -58,10 +37,41 @@ export default function ApproverTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="my-promoters"
+        options={{
+          title: "My Promoters",
+          tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="add-promoter"
         options={{
           title: "Add Promoter",
           tabBarIcon: ({ color }) => <MaterialIcons name="person-add-alt-1" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="details/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="sale/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="sale/duplicates"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="promoter/[id]"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

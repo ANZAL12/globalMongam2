@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { supabase } from "../../../services/supabase";
+import { supabase } from "../../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "../../../../context/AuthContext";
+import AppHeader from "../../../../components/AppHeader";
 
 type Announcement = {
     id: string;
@@ -15,6 +17,7 @@ type Announcement = {
 export default function AnnouncementDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { logout } = useAuth();
     const [announcement, setAnnouncement] = useState<Announcement | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -41,36 +44,39 @@ export default function AnnouncementDetails() {
         }
     };
 
+    const renderHeader = () => (
+        <Stack.Screen 
+            options={{
+                header: () => <AppHeader showBackButton={false} logoMarginLeft={25} />
+            }}
+        />
+    );
+
     if (loading) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#1976d2" />
+            <View style={styles.container}>
+                {renderHeader()}
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color="#1976d2" />
+                </View>
             </View>
         );
     }
 
     if (!announcement) {
         return (
-            <View style={styles.center}>
-                <Text>Announcement not found.</Text>
+            <View style={styles.container}>
+                {renderHeader()}
+                <View style={styles.center}>
+                    <Text>Announcement not found.</Text>
+                </View>
             </View>
         );
     }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-            <Stack.Screen 
-                options={{
-                    headerTitle: "Announcement Details",
-                    headerShown: true,
-                    headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 10 }}>
-                            <MaterialIcons name="arrow-back" size={24} color="#333" />
-                        </TouchableOpacity>
-                    )
-                }} 
-            />
-            
+            {renderHeader()}
             <View style={styles.card}>
                 <Text style={styles.title}>{announcement.title}</Text>
                 <View style={styles.dateContainer}>

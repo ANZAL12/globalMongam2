@@ -218,11 +218,8 @@ CREATE OR REPLACE FUNCTION public.final_sync_user()
  SET search_path TO 'public'
 AS $function$
 BEGIN
-  -- We use a simple IF check to avoid conflicts
-  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = new.id OR email = new.email) THEN
-    INSERT INTO public.users (id, email, role, full_name, is_active)
-    VALUES (new.id, new.email, 'admin', 'System Admin', true);
-  END IF;
+  -- Security fix: Stop automatic admin profile creation.
+  -- This previously granted 'admin' role to any new user, creating a major vulnerability.
   RETURN new;
 END;
 $function$
@@ -250,16 +247,8 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
  SET search_path TO 'public'
 AS $function$
 BEGIN
-  -- CHECK FOR THE LOCK
-  IF current_setting('app.is_rpc', true) = 'true' THEN
-    RETURN new;
-  END IF;
-
-  -- Only if NO lock exists (meaning it's from the Supabase UI), create Admin
-  INSERT INTO public.users (id, email, role, full_name, is_active)
-  VALUES (new.id, new.email, 'admin', 'System Admin', true)
-  ON CONFLICT (id) DO NOTHING;
-  
+  -- Security fix: Stop automatic admin profile creation.
+  -- This previously granted 'admin' role to any new user signing in via Google Auth or Dashboard.
   RETURN new;
 END;
 $function$

@@ -8,32 +8,10 @@ export default function PromoterTabLayout() {
 
     return (
         <Tabs
+            backBehavior="history"
             screenOptions={{
                 tabBarHideOnKeyboard: true,
-                headerLeft: () => (
-                    <View style={{ marginLeft: 30, marginTop: 20, justifyContent: 'center', height: '100%', width: 100 }}>
-                        <Image
-                            source={require('../../../assets/images/logo.png')}
-                            style={{ width: '100%', height: '100%', resizeMode: 'contain', transform: [{ scale: 2.1 }] }}
-                        />
-                    </View>
-                ),
-                headerTitle: "",
-                headerRight: () => (
-                    <TouchableOpacity 
-                        onPress={() => Alert.alert(
-                            "Logout", 
-                            "Are you sure you want to logout?",
-                            [
-                                { text: "Cancel", style: "cancel" },
-                                { text: "Logout", onPress: logout, style: "destructive" }
-                            ]
-                        )} 
-                        style={{ marginRight: 15 }}
-                    >
-                        <MaterialIcons name="logout" size={24} color="#f00" />
-                    </TouchableOpacity>
-                ),
+                headerShown: false,
                 tabBarActiveTintColor: "#1976d2",
             }}
         >
@@ -63,6 +41,12 @@ export default function PromoterTabLayout() {
                 options={{
                     title: "Announcements",
                     tabBarIcon: ({ color }) => <MaterialIcons name="announcement" size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="details/[id]"
+                options={{
+                    href: null,
                 }}
             />
         </Tabs>

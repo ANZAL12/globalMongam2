@@ -9,28 +9,37 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { profile, isApprover } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchDashboardData() {
+      if (!profile) return;
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('sales')
           .select(`
             *,
             promoter:users!sales_promoter_id_fkey (
-              email
+              email,
+              approver_id
             ),
             approver:users!approved_by (
               full_name,
               email
             )
-          `)
-          .order('created_at', { ascending: false });
+          `);
+
+        if (isApprover) {
+          query = query.eq('promoter.approver_id', profile.id);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
         
@@ -49,7 +58,7 @@ export function Dashboard() {
     }
 
     fetchDashboardData();
-  }, []);
+  }, [profile, isApprover]);
 
   const stats = [
     {
@@ -93,7 +102,9 @@ export function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Admin Overview</h1>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          {isApprover ? 'Approver Overview' : 'Admin Overview'}
+        </h1>
         <p className="mt-1 text-sm text-gray-500">Welcome back! Here's what's happening today.</p>
       </div>
 

@@ -4,7 +4,7 @@ import { supabase } from "../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ApproverAddPromoter() {
-  const placeholderColor = "#94a3b8";
+  const placeholderColor = "#64748b"; // Darker slate color for better visibility
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -89,8 +89,8 @@ export default function ApproverAddPromoter() {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
     >
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Add Promoter Request</Text>
@@ -148,14 +148,14 @@ export default function ApproverAddPromoter() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 120 },
   title: { fontSize: 24, fontWeight: "bold", color: "#222", marginBottom: 6 },
   subtitle: { fontSize: 14, color: "#666", marginBottom: 16 },
   input: {
     backgroundColor: "#fff",
-    color: "#111827",
+    color: "#000000",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#cbd5e1",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,

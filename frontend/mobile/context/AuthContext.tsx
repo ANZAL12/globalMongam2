@@ -90,9 +90,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 if (
                     profileError ||
+                    !userData?.role ||
                     !userData?.is_active ||
                     !allowedRoles.has(userData?.role)
                 ) {
+                    console.log('Session Check: Invalid profile or inactive user. Logging out.');
                     await supabase.auth.signOut();
                     await clearLocalSession();
                     return;

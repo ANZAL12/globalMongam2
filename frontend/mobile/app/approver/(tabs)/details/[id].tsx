@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { supabase } from "../../../services/supabase";
+import { supabase } from "../../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from "../../../../context/AuthContext";
+import AppHeader from "../../../../components/AppHeader";
 
 type Announcement = {
     id: string;
@@ -54,53 +55,26 @@ export default function ApproverAnnouncementDetails() {
 
     if (loading) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#1976d2" />
+            <View style={styles.container}>
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color="#1976d2" />
+                </View>
             </View>
         );
     }
 
     if (!announcement) {
         return (
-            <View style={styles.center}>
-                <Text>Announcement not found.</Text>
+            <View style={styles.container}>
+                <View style={styles.center}>
+                    <Text>Announcement not found.</Text>
+                </View>
             </View>
         );
     }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-            <Stack.Screen
-                options={{
-                    headerTitle: "",
-                    headerShown: true,
-                    headerLeft: () => (
-                        <View style={{ flexDirection: "row", alignItems: "center", marginLeft: 10 }}>
-                            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
-                                <MaterialIcons name="arrow-back" size={24} color="#333" />
-                            </TouchableOpacity>
-                            <Image
-                                source={require("../../../assets/images/logo.png")}
-                                style={{ width: 70, height: 38, resizeMode: "contain" }}
-                            />
-                        </View>
-                    ),
-                    headerRight: () => (
-                        <TouchableOpacity
-                            onPress={() =>
-                                Alert.alert("Logout", "Are you sure you want to logout?", [
-                                    { text: "Cancel", style: "cancel" },
-                                    { text: "Logout", onPress: logout, style: "destructive" },
-                                ])
-                            }
-                            style={{ marginRight: 15 }}
-                        >
-                            <MaterialIcons name="logout" size={24} color="#f00" />
-                        </TouchableOpacity>
-                    ),
-                }}
-            />
-
             <View style={styles.card}>
                 <Text style={styles.title}>{announcement.title}</Text>
                 <View style={styles.dateContainer}>

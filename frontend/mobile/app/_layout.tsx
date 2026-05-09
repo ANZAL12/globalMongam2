@@ -60,8 +60,23 @@ function RootLayoutNav() {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const subscribeToAnnouncementAssignments = async () => {
+      // 1. Get current session user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // 2. Double check if user is active in public.users
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_active')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.is_active) {
+        console.log('Root: User is not active, skipping notification subscription.');
+        return;
+      }
+
+      console.log(`Root: Subscribing to notifications for user ${user.id}`);
 
       channel = supabase
         .channel(`announcement_targets_${user.id}`)
@@ -103,14 +118,17 @@ function RootLayoutNav() {
         .subscribe();
     };
 
-    subscribeToAnnouncementAssignments();
+    if (isAuthenticated && role) {
+      subscribeToAnnouncementAssignments();
+    }
 
     return () => {
       if (channel) {
+        console.log('Root: Cleaning up notification channel');
         supabase.removeChannel(channel);
       }
     };
-  }, []);
+  }, [isAuthenticated, role]);
 
   useEffect(() => {
     const clearBadge = async () => {

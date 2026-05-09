@@ -6,10 +6,13 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  Image,
+  Alert,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "../../../services/supabase";
+import { supabase } from "../../../../services/supabase";
+import { useAuth } from "../../../../context/AuthContext";
 
 type DuplicateSale = {
   id: string;
@@ -27,6 +30,7 @@ type DuplicateSale = {
 
 export default function DuplicateSerialSalesScreen() {
   const router = useRouter();
+  const { logout } = useAuth();
   const { serial, currentSaleId } = useLocalSearchParams<{
     serial?: string;
     currentSaleId?: string;
@@ -101,10 +105,7 @@ export default function DuplicateSerialSalesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
+      <View style={styles.contentHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Duplicate Serial Sales</Text>
           <Text style={styles.headerSubtitle}>Serial: {serialValue || "N/A"}</Text>
@@ -158,16 +159,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     padding: 15,
   },
-  header: {
+  contentHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
-  },
-  backButton: {
-    padding: 6,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: "#fff",
+    marginTop: 5,
   },
   headerTitle: {
     fontSize: 18,

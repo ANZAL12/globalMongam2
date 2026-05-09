@@ -2,6 +2,7 @@ import logo from '../../assets/logo.png';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -13,21 +14,23 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Approvers', href: '/approvers', icon: ShieldCheck },
-  { name: 'Promoters', href: '/promoters', icon: Users },
-  { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog },
-  { name: 'Sales', href: '/sales', icon: ShoppingBag },
-  { name: 'Promoter Announcements', href: '/announcements/promoters', icon: Megaphone },
-  { name: 'Approver Announcements', href: '/announcements/approvers', icon: ShieldCheck },
-  { name: 'Logs', href: '/logs', icon: FileText },
-  { name: 'Media Library', href: '/media', icon: Image },
-];
-
 export function Sidebar() {
+  const { profile, isAdmin, isApprover } = useAuth();
   const location = useLocation();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, show: true },
+    { name: 'Approvers', href: '/approvers', icon: ShieldCheck, show: isAdmin },
+    { name: 'Promoters', href: '/promoters', icon: Users, show: isAdmin },
+    { name: 'My Promoters', href: '/my-promoters', icon: Users, show: isApprover },
+    { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog, show: isAdmin },
+    { name: 'Sales', href: '/sales', icon: ShoppingBag, show: true },
+    { name: 'Promoter Announcements', href: '/announcements/promoters', icon: Megaphone, show: true },
+    { name: 'Approver Announcements', href: '/announcements/approvers', icon: ShieldCheck, show: isAdmin },
+    { name: 'Logs', href: '/logs', icon: FileText, show: isAdmin },
+    { name: 'Media Library', href: '/media', icon: Image, show: isAdmin },
+  ].filter(item => item.show);
 
   useEffect(() => {
     async function fetchPendingCount() {
@@ -72,8 +75,8 @@ export function Sidebar() {
               const isActive =
                 item.href === '/'
                   ? location.pathname === '/'
-                  : item.href === '/promoters'
-                  ? location.pathname === '/promoters' || location.pathname.startsWith('/promoters/')
+                  : item.href === '/promoters' || item.href === '/my-promoters'
+                  ? location.pathname === item.href || location.pathname.startsWith('/promoters/')
                   : item.href === '/promoters/manage'
                   ? location.pathname === '/promoters/manage'
                   : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
