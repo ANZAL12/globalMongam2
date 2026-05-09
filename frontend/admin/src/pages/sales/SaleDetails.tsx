@@ -55,7 +55,7 @@ export function SaleDetails() {
           .from('sales')
           .select(`
             *,
-            promoter:users!promoter_id (
+            promoter:users!sales_promoter_id_fkey (
               full_name,
               email,
               phone_number,
@@ -108,7 +108,7 @@ export function SaleDetails() {
         if (approverId) {
           const { data: approverData, error: approverError } = await supabase
             .from('users')
-            .select('id, email, full_name, phone_number, expo_push_token')
+            .select('id, email, full_name, phone_number, expo_push_token, fcm_web_push_token')
             .eq('id', approverId)
             .single();
           if (!approverError && approverData) {
@@ -189,27 +189,7 @@ export function SaleDetails() {
   };
 
   const handleNotifyApprover = async () => {
-    if (!sale) return;
-
-    if (!approver?.expo_push_token) {
-      showAlert({
-        title: 'No push token',
-        message: 'This approver has not enabled push notifications (no Expo push token found).',
-        severity: 'warning'
-      });
-      return;
-    }
-
-    const token = String(approver.expo_push_token);
-    const looksLikeExpoToken = token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken');
-    if (!looksLikeExpoToken) {
-      showAlert({
-        title: 'Invalid push token',
-        message: 'Stored push token does not look like a valid Expo push token.',
-        severity: 'warning'
-      });
-      return;
-    }
+    if (!sale || !approver) return;
 
     const confirmed = await showConfirm({
       title: 'Notify approver?',
@@ -220,45 +200,72 @@ export function SaleDetails() {
 
     setProcessing(true);
     try {
-      const payload = [
-        {
-          to: token,
-          title: 'Pending sale approval',
-          body: `${sale.product_name} submitted by ${sale.promoter_email} is waiting for your approval.`,
-          sound: 'default',
-          priority: 'high',
-          channelId: 'default',
-          data: {
-            type: 'sale_pending_approval',
-            sale_id: sale.id,
-          }
-        }
-      ];
-
-      const res = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      // Try calling the Supabase Edge Function first (best for Firebase/FCM and CORS)
+      const { data, error: functionError } = await supabase.functions.invoke('send-sale-notification', {
+        body: {
+          saleId: sale.id,
+          approverId: approver.id,
+        },
       });
 
-      if (!res.ok) {
-        throw new Error(`Push request failed (HTTP ${res.status})`);
+      if (!functionError && data?.success) {
+        await logActivity(
+          'Notify Approver',
+          `Sent push reminder to approver ${approver.email || approver.id} via Edge Function`
+        );
+
+        showAlert({
+          title: 'Notification sent',
+          message: 'A push reminder was sent to the approver.',
+          severity: 'success'
+        });
+        return;
       }
 
-      await logActivity(
-        'Notify Approver',
-        `Sent push reminder to approver ${approver.email || approver.id} for sale ${sale.id}`
-      );
+      console.warn('Edge function failed or returned error, falling back to direct Expo push:', functionError);
 
-      showAlert({
-        title: 'Notification sent',
-        message: 'A push reminder was sent to the approver.',
-        severity: 'success'
-      });
+      // Fallback: Direct Expo push (only if expo_push_token exists)
+      if (approver.expo_push_token) {
+        const payload = [
+          {
+            to: approver.expo_push_token,
+            title: 'Pending sale approval',
+            body: `${sale.product_name} submitted by ${sale.promoter_email} is waiting for your approval.`,
+            sound: 'default',
+            priority: 'high',
+            channelId: 'default',
+            data: {
+              type: 'sale_pending_approval',
+              sale_id: sale.id,
+            }
+          }
+        ];
+
+        const res = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          showAlert({
+            title: 'Notification sent',
+            message: 'A push reminder was sent via Expo direct API.',
+            severity: 'success'
+          });
+          return;
+        }
+      }
+
+      throw new Error('Could not send notification via any available provider.');
     } catch (e: any) {
+      console.error('Push Notification Error:', e);
       showAlert({
         title: 'Failed to send',
-        message: e?.message || 'Could not send push notification.',
+        message: e?.message || 'Could not send push notification. Please ensure the approver has enabled notifications.',
         severity: 'error'
       });
     } finally {

@@ -25,7 +25,7 @@ export function Dashboard() {
           .from('sales')
           .select(`
             *,
-            promoter:users!sales_promoter_id_fkey (
+            promoter:users!inner!sales_promoter_id_fkey (
               email,
               approver_id
             ),

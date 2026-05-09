@@ -11,8 +11,8 @@ export default function ApproverLayout() {
         headerBackTitleVisible: false,
         header: () => {
           // Check if we are in any detail page to show back button
-          // User requested to remove arrow from review sale page, so we exclude 'sale' and 'duplicates'
-          const isDetail = segments.some(s => ['promoter', 'details'].includes(s));
+          // User requested to remove arrow from review sale page and promoter page
+          const isDetail = segments.some(s => ['details'].includes(s));
           return <AppHeader showBackButton={isDetail} />;
         }
       }}

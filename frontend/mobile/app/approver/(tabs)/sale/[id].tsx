@@ -39,8 +39,6 @@ export default function ApproverSaleDetails() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [showRejectInput, setShowRejectInput] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -72,16 +70,15 @@ export default function ApproverSaleDetails() {
     }
   };
 
-  const updateSaleStatus = async (status: string, reason: string | null = null) => {
+  const updateSaleStatus = async (status: string) => {
     setProcessing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("sales")
         .update({
           status,
-          rejection_reason: reason,
-          approved_at: status === "approver_approved" ? new Date().toISOString() : null,
-          rejected_at: status === "rejected" ? new Date().toISOString() : null,
+          approved_by: status === "approver_approved" ? user?.id : null,
         })
         .eq("id", id);
 
@@ -89,8 +86,6 @@ export default function ApproverSaleDetails() {
 
       Alert.alert("Success", `Sale has been ${status === "approver_approved" ? "approved" : "rejected"}.`);
       fetchSale();
-      setShowRejectInput(false);
-      setRejectionReason("");
     } catch (error) {
       console.error("Failed to update sale status", error);
       Alert.alert("Error", "Failed to update sale status.");
@@ -208,13 +203,6 @@ export default function ApproverSaleDetails() {
           <Text style={styles.label}>Date</Text>
           <Text style={styles.value}>{new Date(sale.created_at).toLocaleString()}</Text>
         </View>
-
-        {sale.rejection_reason && (
-          <View style={styles.rejectionContainer}>
-            <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
-            <Text style={styles.rejectionText}>{sale.rejection_reason}</Text>
-          </View>
-        )}
       </View>
 
       {sale.bill_image_url && (
@@ -222,61 +210,29 @@ export default function ApproverSaleDetails() {
           <Text style={styles.label}>Bill Image</Text>
           <Image source={{ uri: sale.bill_image_url }} style={styles.billImage} resizeMode="contain" />
         </View>
-      )}
-
-      {sale.status === "pending" && (
+      )}      {sale.status === "pending" && (
         <View style={styles.actionCard}>
-          {!showRejectInput ? (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.rejectButton]}
-                onPress={() => setShowRejectInput(true)}
-                disabled={processing}
-              >
-                <MaterialIcons name="close" size={20} color="#fff" />
-                <Text style={styles.buttonText}>Reject</Text>
-              </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => updateSaleStatus("rejected")}
+              disabled={processing}
+            >
+              <MaterialIcons name="close" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Reject</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, styles.approveButton]}
-                onPress={() => updateSaleStatus("approver_approved")}
-                disabled={processing}
-              >
-                <MaterialIcons name="check" size={20} color="#fff" />
-                <Text style={styles.buttonText}>Approve</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.rejectInputContainer}>
-              <Text style={styles.label}>Reason for Rejection</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter reason..."
-                value={rejectionReason}
-                onChangeText={setRejectionReason}
-                multiline
-              />
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cancelButton]}
-                  onPress={() => setShowRejectInput(false)}
-                  disabled={processing}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.confirmRejectButton]}
-                  onPress={() => updateSaleStatus("rejected", rejectionReason)}
-                  disabled={processing || !rejectionReason.trim()}
-                >
-                  <Text style={styles.buttonText}>Confirm Reject</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton]}
+              onPress={() => updateSaleStatus("approver_approved")}
+              disabled={processing}
+            >
+              <MaterialIcons name="check" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Approve</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
+      )})}
 
       <View style={{ height: 40 }} />
     </ScrollView>

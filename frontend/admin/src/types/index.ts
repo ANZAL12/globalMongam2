@@ -6,12 +6,21 @@ export type Sale = {
   serial_no: string | null;
   bill_no: string | null;
   bill_amount: string;
-  status: 'pending' | 'approved' | 'rejected' | 'paid';
+  status: 'pending' | 'approver_approved' | 'approved' | 'rejected' | 'paid';
   incentive_amount: string | null;
   payment_status: 'pending' | 'paid' | 'not_applicable';
   created_at: string;
   paid_at?: string | null;
   promoter_email?: string;
+  approver_name?: string | null;
+  promoter?: {
+    email: string;
+    approver_id: string;
+  };
+  approver?: {
+    full_name: string | null;
+    email: string;
+  };
   transaction_id?: string | null;
   promoter_phone?: string | null;
   promoter_gpay?: string | null;

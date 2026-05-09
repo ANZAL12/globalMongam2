@@ -24,28 +24,41 @@ function RootLayoutNav() {
   const router = useRouter();
   const [pendingNotificationData, setPendingNotificationData] = useState<NotificationRouteData | null>(null);
 
-  // Re-sync whenever the user logs in or out
+  // 1. Initial Permission Request & Sync on App Start
   useEffect(() => {
     const checkUserAndSync = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        console.log('Root: User detected, syncing push token...');
+      if (user && isAuthenticated) {
+        console.log('Root: User detected on start, syncing push token...');
         await requestAllPermissions();
         await syncPushTokenToBackend();
       }
     };
     
-    checkUserAndSync();
+    if (!isLoading) {
+      checkUserAndSync();
+    }
+  }, [isLoading, isAuthenticated]);
 
-    // Listen for auth changes (login/logout)
+  // 2. Auth State Change Listener (only for logging)
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        syncPushTokenToBackend();
-      }
+      console.log('Root: Auth Event:', event);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // 3. New Sync Logic for fresh logins - only sync AFTER navigation should have happened
+  useEffect(() => {
+    if (isAuthenticated && role) {
+      const timer = setTimeout(async () => {
+        console.log('Root: Syncing push token after login...');
+        await syncPushTokenToBackend();
+      }, 2000); // 2 second delay to ensure navigation completes
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, role]);
 
   useEffect(() => {
     // Listener for notifications received while the app is foregrounded
