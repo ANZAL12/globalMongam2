@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Users, Megaphone, List, PlusCircle, BellRing, Activity } from 'lucide-react';
 import { supabase } from '../services/supabase';
@@ -6,20 +7,29 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const role = localStorage.getItem('role');
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isSigningOut, setIsSigningOut] = useState(false);
 
     const onLogout = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            await supabase
-                .from('users')
-                .update({ expo_push_token: null, fcm_web_push_token: null })
-                .eq('id', user.id);
-        }
+        setIsSigningOut(true);
 
-        await supabase.auth.signOut();
-        localStorage.removeItem('access');
-        localStorage.removeItem('role');
-        navigate('/');
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('users')
+                    .update({ expo_push_token: null, fcm_web_push_token: null })
+                    .eq('id', user.id);
+            }
+
+            await supabase.auth.signOut();
+            localStorage.removeItem('access');
+            localStorage.removeItem('role');
+            navigate('/');
+        } finally {
+            setIsSigningOut(false);
+            setShowLogoutConfirm(false);
+        }
     };
 
     const navItems = role === 'admin'
@@ -57,7 +67,7 @@ export default function Layout() {
                     <div className="relative h-20 w-48 overflow-hidden">
                         <img src="/logo.png" alt="Global Agencies Logo" className="absolute left-[0px] top-[65%] -translate-y-1/2 h-20 scale-[2.2] object-contain origin-left" />
                     </div>
-                    <button onClick={onLogout} className="p-2">
+                    <button onClick={() => setShowLogoutConfirm(true)} className="p-2" aria-label="Sign out">
                         <LogOut size={24} color="#f00" />
                     </button>
                 </header>
@@ -97,6 +107,38 @@ export default function Layout() {
                         })}
                     </div>
                 </nav>
+
+                {showLogoutConfirm && (
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 px-5">
+                        <div className="w-full max-w-[340px] rounded-[12px] bg-white p-5 shadow-xl">
+                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#ffebee]">
+                                <LogOut size={24} color="#d32f2f" />
+                            </div>
+                            <h2 className="text-center text-[20px] font-bold text-[#1a1a1a]">Logout?</h2>
+                            <p className="mt-2 text-center text-[14px] leading-5 text-[#666]">
+                                Are you sure you want to logout?
+                            </p>
+                            <div className="mt-6 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    disabled={isSigningOut}
+                                    className="flex-1 rounded-[10px] border border-[#dcdcdc] bg-white px-4 py-3 text-[15px] font-bold text-[#444] disabled:opacity-60"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onLogout}
+                                    disabled={isSigningOut}
+                                    className="flex-1 rounded-[10px] bg-[#d32f2f] px-4 py-3 text-[15px] font-bold text-white disabled:opacity-60"
+                                >
+                                    {isSigningOut ? 'Signing out...' : 'Logout'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
