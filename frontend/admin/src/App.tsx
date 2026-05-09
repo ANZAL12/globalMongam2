@@ -19,6 +19,9 @@ import { DuplicateSerialSales } from './pages/sales/DuplicateSerialSales';
 import { ApproverAnnouncements, PromoterAnnouncements } from './pages/announcements/Announcements';
 import { Logs } from './pages/logs/Logs';
 import { MediaLibrary } from './pages/MediaLibrary';
+import { UpdatePassword } from './pages/UpdatePassword';
+import { ResetPassword } from './pages/ResetPassword';
+import { IncentiveLeaderboard } from './pages/IncentiveLeaderboard';
 
 import { ModalProvider } from './context/ModalContext';
 import { AuthProvider } from './context/AuthContext';
@@ -30,6 +33,7 @@ function App() {
         <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           
           <Route element={<AdminLayout />}>
             <Route path="/" element={<Dashboard />} />
@@ -52,6 +56,8 @@ function App() {
             <Route path="/announcements/approvers" element={<ApproverAnnouncements />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/media" element={<MediaLibrary />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/leaderboard" element={<IncentiveLeaderboard />} />
           </Route>
         </Routes>
       </Router>

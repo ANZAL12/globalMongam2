@@ -135,3 +135,21 @@ export async function startForegroundPushListener() {
     });
   });
 }
+
+export async function sendAnnouncementPushViaFirebase({
+  announcementId,
+  targetUserIds,
+}: {
+  announcementId: string;
+  targetUserIds: string[];
+}) {
+  const { data, error } = await supabase.functions.invoke('send-web-announcement-push', {
+    body: {
+      announcementId,
+      targetIds: targetUserIds,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+}

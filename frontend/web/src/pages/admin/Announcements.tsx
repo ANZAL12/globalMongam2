@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { sendAnnouncementPushViaFirebase } from '../../services/firebaseMessaging';
 
 type Announcement = {
     id: string;
@@ -219,6 +220,16 @@ export default function AdminAnnouncements() {
                         .upsert(targetsData);
                     
                     if (targetError) throw targetError;
+
+                    try {
+                        await sendAnnouncementPushViaFirebase({
+                            announcementId,
+                            targetUserIds: selectedTargetIds,
+                        });
+                    } catch (pushError) {
+                        console.error('Push delivery could not be confirmed', pushError);
+                        window.alert('Announcement saved, but push delivery could not be confirmed for all users.');
+                    }
                 }
             }
 

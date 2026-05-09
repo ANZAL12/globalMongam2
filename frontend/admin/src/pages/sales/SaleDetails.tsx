@@ -166,6 +166,7 @@ export function SaleDetails() {
         .update({ 
           status: 'paid',
           payment_status: 'paid',
+          incentive_amount: incentiveAmount || sale?.incentive_amount,
           transaction_id: transactionId || sale?.transaction_id,
           paid_at: new Date().toISOString(),
           paid_by: user?.id,

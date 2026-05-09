@@ -20,14 +20,18 @@ import ApproverDashboard from './pages/approver/Dashboard';
 import ApproverAddPromoter from './pages/approver/AddPromoter';
 import ApproverAnnouncements from './pages/approver/Announcements';
 import ApproverAnnouncementDetail from './pages/approver/AnnouncementDetail';
+import ApproverMyPromoters from './pages/approver/MyPromoters';
+import ApproverPromoterDetail from './pages/approver/PromoterDetail';
 import PromoterAnnouncementDetail from './pages/promoter/AnnouncementDetail';
 import { useEffect, useState } from 'react';
 import { supabase } from './services/supabase';
 import { startForegroundPushListener, syncWebPushToken } from './services/firebaseMessaging';
 
+const ALLOWED_ROLES = new Set(['admin', 'promoter', 'approver']);
+
 function ProtectedRoute({ children, allowedRole }: { children: JSX.Element, allowedRole: string }) {
   const token = localStorage.getItem('access');
-  const role = localStorage.getItem('role');
+  let role = localStorage.getItem('role');
   const [checking, setChecking] = useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
 
@@ -52,13 +56,21 @@ function ProtectedRoute({ children, allowedRole }: { children: JSX.Element, allo
 
         const { data, error } = await supabase
           .from('users')
-          .select('must_change_password')
+          .select('role, must_change_password, is_active')
           .eq('id', user.id)
           .single();
 
-        if (error) {
+        if (error || !data?.role || !data?.is_active || !ALLOWED_ROLES.has(data.role)) {
+          await supabase.auth.signOut();
+          localStorage.removeItem('access');
+          localStorage.removeItem('role');
           if (mounted) setMustChangePassword(false);
           return;
+        }
+
+        if (data.role !== role) {
+          localStorage.setItem('role', data.role);
+          role = data.role;
         }
 
         if (mounted) setMustChangePassword(Boolean(data?.must_change_password));
@@ -134,6 +146,8 @@ function App() {
         <Route path="sale/:id" element={<ApproverSaleDetail />} />
         <Route path="sale/duplicates" element={<DuplicateSerialSales />} />
         <Route path="add-promoter" element={<ApproverAddPromoter />} />
+        <Route path="my-promoters" element={<ApproverMyPromoters />} />
+        <Route path="promoter/:id" element={<ApproverPromoterDetail />} />
         <Route path="announcements" element={<ApproverAnnouncements />} />
         <Route path="details/:id" element={<ApproverAnnouncementDetail />} />
       </Route>

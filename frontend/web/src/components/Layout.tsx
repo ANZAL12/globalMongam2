@@ -8,6 +8,14 @@ export default function Layout() {
     const role = localStorage.getItem('role');
 
     const onLogout = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase
+                .from('users')
+                .update({ expo_push_token: null, fcm_web_push_token: null })
+                .eq('id', user.id);
+        }
+
         await supabase.auth.signOut();
         localStorage.removeItem('access');
         localStorage.removeItem('role');
@@ -26,8 +34,9 @@ export default function Layout() {
             ? [
                 { name: 'Dashboard', path: '/approver', icon: LayoutDashboard },
                 { name: 'Review Sales', path: '/approver/sales', icon: List },
-                { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle },
-                { name: 'Announcements', path: '/approver/announcements', icon: Megaphone }
+                { name: 'Announcements', path: '/approver/announcements', icon: Megaphone },
+                { name: 'My Promoters', path: '/approver/my-promoters', icon: Users },
+                { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle }
             ]
         : role === 'promoter'
             ? [

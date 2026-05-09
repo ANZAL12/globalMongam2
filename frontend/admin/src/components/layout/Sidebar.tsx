@@ -11,7 +11,9 @@ import {
   FileText,
   UserCog,
   Image,
-  ShieldCheck
+  ShieldCheck,
+  Key,
+  Trophy
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -26,10 +28,12 @@ export function Sidebar() {
     { name: 'My Promoters', href: '/my-promoters', icon: Users, show: isApprover },
     { name: 'Manage Promoters', href: '/promoters/manage', icon: UserCog, show: isAdmin },
     { name: 'Sales', href: '/sales', icon: ShoppingBag, show: true },
+    { name: 'Incentive Target', href: '/leaderboard', icon: Trophy, show: true },
     { name: 'Promoter Announcements', href: '/announcements/promoters', icon: Megaphone, show: true },
     { name: 'Approver Announcements', href: '/announcements/approvers', icon: ShieldCheck, show: isAdmin },
     { name: 'Logs', href: '/logs', icon: FileText, show: isAdmin },
     { name: 'Media Library', href: '/media', icon: Image, show: isAdmin },
+    { name: 'Account Recovery', href: '/reset-password', icon: Key, show: isAdmin },
   ].filter(item => item.show);
 
   useEffect(() => {
