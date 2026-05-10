@@ -24,6 +24,9 @@ export type Sale = {
   transaction_id?: string | null;
   promoter_phone?: string | null;
   promoter_gpay?: string | null;
+  bill_image_url?: string | null;
+  promoter_name?: string | null;
+  promoter_upi?: string | null;
 };
 
 export type Promoter = {

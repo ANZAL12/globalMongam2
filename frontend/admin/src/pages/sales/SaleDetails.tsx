@@ -43,6 +43,7 @@ export function SaleDetails() {
     full_name: string | null;
     phone_number: string | null;
     expo_push_token: string | null;
+    fcm_web_push_token: string | null;
   } | null>(null);
   const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
@@ -188,7 +189,7 @@ export function SaleDetails() {
         ...prev, 
         status: 'paid',
         payment_status: 'paid',
-        incentive_amount: parseFloat(incentiveAmount || prev.incentive_amount?.toString() || '0'),
+        incentive_amount: (incentiveAmount || prev.incentive_amount?.toString() || '0'),
         transaction_id: transactionId || prev.transaction_id
       } : null);
       showAlert({
@@ -460,7 +461,7 @@ export function SaleDetails() {
               </div>
 
               {/* Bill Image */}
-              {(sale as any).bill_image_url && (
+              {sale.bill_image_url && (
                 <div className="mt-12 pt-12 border-t border-gray-50">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-gray-900 flex items-center">
@@ -468,7 +469,7 @@ export function SaleDetails() {
                       Submitted Bill Attachment
                     </h3>
                     <a 
-                      href={(sale as any).bill_image_url} 
+                      href={sale.bill_image_url || '#'} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700 flex items-center group"
@@ -479,7 +480,7 @@ export function SaleDetails() {
                   </div>
                   <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm relative group bg-gray-50">
                     <img 
-                      src={(sale as any).bill_image_url} 
+                      src={sale.bill_image_url || ''} 
                       alt="Bill Invoice" 
                       className="w-full h-auto max-h-[500px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.02]" 
                     />
@@ -596,13 +597,13 @@ export function SaleDetails() {
                   <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 space-y-4">
                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Scan to Pay via UPI</p>
                     
-                    {((sale as any).promoter_upi) ? (
+                    {sale.promoter_upi ? (
                       <div className="flex flex-col items-center space-y-3">
                         <div className="bg-white p-3 rounded-2xl shadow-sm border border-indigo-50">
                           {(() => {
-                            const upiAddr = (sale as any).promoter_upi;
+                            const upiAddr = sale.promoter_upi;
                             const amt = parseFloat(incentiveAmount || sale.incentive_amount || '0').toFixed(2);
-                            const payeeName = ((sale as any).promoter_name || 'Promoter').substring(0, 20); // GPay limit
+                            const payeeName = (sale.promoter_name || 'Promoter').substring(0, 20); // GPay limit
                             const upiUrl = `upi://pay?pa=${upiAddr}&pn=${encodeURIComponent(payeeName)}&am=${amt}&cu=INR`;
                             
                             return (
@@ -615,7 +616,7 @@ export function SaleDetails() {
                           })()}
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-indigo-900">{(sale as any).promoter_upi}</p>
+                          <p className="text-xs font-bold text-indigo-900">{sale.promoter_upi}</p>
                           <p className="text-[10px] text-indigo-500 font-medium">Amount: ₹{parseFloat(incentiveAmount || sale.incentive_amount || '0').toFixed(2)}</p>
                         </div>
                       </div>
