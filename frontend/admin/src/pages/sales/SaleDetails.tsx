@@ -34,6 +34,7 @@ export function SaleDetails() {
   const { showAlert, showConfirm } = useModal();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [approverName, setApproverName] = useState<string | null>(null);
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
   const [approver, setApprover] = useState<{
@@ -62,6 +63,10 @@ export function SaleDetails() {
               gpay_number,
               upi_id,
               approver_id
+            ),
+            approved_by_user:users!approved_by (
+              full_name,
+              email
             )
           `)
           .eq('id', id)
@@ -84,6 +89,9 @@ export function SaleDetails() {
         setSale(mappedResult);
         setIncentiveAmount(data.incentive_amount?.toString() || '');
         setTransactionId(data.transaction_id || '');
+        // Extract the name of whoever approved this sale
+        const approvedByUser = (data as any).approved_by_user;
+        setApproverName(approvedByUser?.full_name || approvedByUser?.email || null);
         const serialKey = normalizeSerial(data.serial_no);
         if (serialKey) {
           const { data: duplicateSales, error: duplicateError } = await supabase
@@ -139,7 +147,7 @@ export function SaleDetails() {
         (payload) => {
           console.log('Real-time sale update:', payload);
           // Check if the change is for the current sale
-          const recordId = payload.new?.id || payload.old?.id;
+          const recordId = (payload.new as any)?.id || (payload.old as any)?.id;
           if (recordId === id) {
             fetchSale(false); // Silent fetch, no loading spinner
           }
@@ -175,8 +183,14 @@ export function SaleDetails() {
         .eq('id', id);
 
       if (error) throw error;
-      await logActivity('Disburse Incentive', `Marked payment of ₹${sale?.incentive_amount} as paid for ${sale?.product_name}`);
-      setSale(prev => prev ? { ...prev, payment_status: 'paid' } : null);
+      await logActivity('Disburse Incentive', `Marked payment of ₹${incentiveAmount || sale?.incentive_amount} as paid for ${sale?.product_name}`);
+      setSale(prev => prev ? { 
+        ...prev, 
+        status: 'paid',
+        payment_status: 'paid',
+        incentive_amount: parseFloat(incentiveAmount || prev.incentive_amount?.toString() || '0'),
+        transaction_id: transactionId || prev.transaction_id
+      } : null);
       showAlert({
         title: 'Payment Confirmed',
         message: 'The incentive has been marked as paid.',
@@ -436,7 +450,9 @@ export function SaleDetails() {
                             ? 'bg-rose-100 text-rose-800'
                             : 'bg-orange-100 text-orange-800'
                         }`}>
-                          {sale.status.replace('_', ' ')}
+                          {sale.status === 'approver_approved' || sale.status === 'paid'
+                            ? `${approverName || 'Approver'} Approved`
+                            : sale.status.replace('_', ' ')}
                         </span>
                       </div>
                    </div>
@@ -559,11 +575,11 @@ export function SaleDetails() {
                     <div className="flex items-center justify-between">
                        <span className="text-sm font-medium text-gray-500">Current Status:</span>
                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                         sale.status === 'approver_approved' || sale.status === 'paid'
+                         (sale.status as string) === 'approver_approved' || sale.status === 'paid'
                            ? 'bg-emerald-100 text-emerald-800'
                            : 'bg-rose-100 text-rose-800'
                        }`}>
-                         {sale.status}
+                         {(sale.status as string) === 'approver_approved' || sale.status === 'paid' ? `${approverName || 'Approver'} Approved` : sale.status}
                        </span>
                     </div>
                     {sale.transaction_id && (

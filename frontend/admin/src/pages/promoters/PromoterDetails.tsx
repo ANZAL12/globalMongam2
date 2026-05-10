@@ -9,7 +9,6 @@ import {
   Mail, 
   Phone, 
   Store, 
-  CreditCard, 
   Calendar,
   CheckCircle2,
   XCircle,

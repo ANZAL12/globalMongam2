@@ -8,7 +8,6 @@ import {
   TrendingUp, 
   Medal, 
   ChevronRight,
-  ArrowUpRight,
   User,
   ShieldCheck,
   Loader2

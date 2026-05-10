@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export function Sidebar() {
-  const { profile, isAdmin, isApprover } = useAuth();
+  const { isAdmin, isApprover } = useAuth();
   const location = useLocation();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
@@ -31,9 +31,9 @@ export function Sidebar() {
     { name: 'Incentive Target', href: '/leaderboard', icon: Trophy, show: true },
     { name: 'Promoter Announcements', href: '/announcements/promoters', icon: Megaphone, show: true },
     { name: 'Approver Announcements', href: '/announcements/approvers', icon: ShieldCheck, show: isAdmin },
-    { name: 'Logs', href: '/logs', icon: FileText, show: isAdmin },
     { name: 'Media Library', href: '/media', icon: Image, show: isAdmin },
     { name: 'Account Recovery', href: '/reset-password', icon: Key, show: isAdmin },
+    { name: 'Logs', href: '/logs', icon: FileText, show: isAdmin },
   ].filter(item => item.show);
 
   useEffect(() => {

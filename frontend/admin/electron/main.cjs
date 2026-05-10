@@ -180,7 +180,8 @@ function registerCloudinaryHandlers() {
 
       console.log(`Creating ${data.role} via Admin API:`, data.email);
 
-      const authRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      // Helper to create the auth user
+      const createAuthUser = async () => fetch(`${supabaseUrl}/auth/v1/admin/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,8 +196,58 @@ function registerCloudinaryHandlers() {
         })
       });
 
-      const authUser = await authRes.json();
-      if (!authRes.ok) throw new Error(authUser.message || 'Failed to create auth user');
+      let authRes = await createAuthUser();
+      let authUser = await authRes.json();
+
+      // If user already exists in auth (e.g. orphaned from a failed OAuth login), clean up and retry
+      if (!authRes.ok) {
+        const errMsg = authUser.message || authUser.msg || authUser.error_description || authUser.error || '';
+        console.error('Supabase Auth Error Response:', JSON.stringify(authUser, null, 2));
+
+        const isAlreadyExists = errMsg.toLowerCase().includes('already registered') || errMsg.toLowerCase().includes('already exists') || authUser.code === 422;
+
+        if (isAlreadyExists) {
+          console.log(`Email already exists in auth. Checking if it's an orphaned OAuth record for: ${data.email}`);
+
+          // List users and find orphaned auth user (not in public.users)
+          const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1000`, {
+            headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
+          });
+          const listData = await listRes.json();
+          const existingAuthUser = (listData.users || []).find(u => u.email === data.email);
+
+          if (existingAuthUser) {
+            // Check if it exists in public.users (i.e. a real registered user)
+            const profileRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${existingAuthUser.id}&select=id`, {
+              headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
+            });
+            const profileData = await profileRes.json();
+
+            if (!profileData || profileData.length === 0) {
+              // Orphaned auth user — safe to delete and recreate
+              console.log(`Deleting orphaned auth user ${existingAuthUser.id} for ${data.email}`);
+              await fetch(`${supabaseUrl}/auth/v1/admin/users/${existingAuthUser.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
+              });
+
+              // Retry creation
+              authRes = await createAuthUser();
+              authUser = await authRes.json();
+              if (!authRes.ok) {
+                throw new Error(authUser.message || authUser.error || 'Failed to create auth user after cleanup');
+              }
+              console.log(`Successfully recreated auth user for ${data.email} after removing orphaned OAuth record.`);
+            } else {
+              throw new Error(`${data.email} is already a registered user in this system.`);
+            }
+          } else {
+            throw new Error(errMsg || 'Failed to create auth user');
+          }
+        } else {
+          throw new Error(errMsg || 'Failed to create auth user');
+        }
+      }
 
       const profileData = {
         id: authUser.id,

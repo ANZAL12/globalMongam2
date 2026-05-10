@@ -37,6 +37,31 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
         iosClientId: "862395033084-si99fukoqvv2mi35u7hsafvf5tpcmtkf.apps.googleusercontent.com",
     });
 
+    /**
+     * Cleans up an orphaned auth.users record created by a failed/unauthorized
+     * Google OAuth attempt. Calls the server-side Edge Function so the service
+     * role key is never exposed on the client.
+     */
+    const cleanupOrphanedAuthUser = useCallback(async (userId: string) => {
+        try {
+            const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+            const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+            await fetch(`${supabaseUrl}/functions/v1/cleanup-orphaned-auth`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${anonKey}`,
+                    'apikey': anonKey ?? '',
+                },
+                body: JSON.stringify({ userId }),
+            });
+            console.log(`Orphaned auth user ${userId} cleanup requested.`);
+        } catch (err) {
+            // Non-fatal: just log. The admin's createUser flow already handles this as a fallback.
+            console.warn('Could not clean up orphaned auth user:', err);
+        }
+    }, []);
+
     const handleGoogleLogin = useCallback(
         async (idToken: string) => {
             try {
@@ -47,14 +72,20 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
 
                 if (authError) throw authError;
 
+                const userId = data.user.id;
+
                 const { data: userData, error: userError } = await supabase
                     .from("users")
                     .select("role, must_change_password, is_active")
-                    .eq("id", data.user.id)
+                    .eq("id", userId)
                     .single();
 
                 if (userError) {
+                    // User not in public.users — unregistered email.
+                    // Sign out first, then clean up the orphaned auth record so
+                    // admin can register this email later without conflict.
                     await supabase.auth.signOut();
+                    void cleanupOrphanedAuthUser(userId);
                     throw new Error("Not Registered. Please contact the admin.");
                 }
 
@@ -65,6 +96,7 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
 
                 if (!ALLOWED_ROLES.has(userData.role)) {
                     await supabase.auth.signOut();
+                    void cleanupOrphanedAuthUser(userId);
                     throw new Error("Access denied. Only registered admins, promoters, and approvers can sign in.");
                 }
 
@@ -82,7 +114,7 @@ export function GoogleSignInProvider({ children }: { children: React.ReactNode }
                 router.replace("/login");
             }
         },
-        [login, logout, router]
+        [login, logout, router, cleanupOrphanedAuthUser]
     );
 
     useEffect(() => {

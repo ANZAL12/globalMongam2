@@ -10,7 +10,6 @@ import {
   Shield, 
   Send, 
   Loader2, 
-  CheckCircle2, 
   AlertCircle 
 } from 'lucide-react';
 
