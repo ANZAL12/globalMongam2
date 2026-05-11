@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+/// <reference lib="deno.ns" />
+import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,38 +14,38 @@ const HTML = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Your Password | Global Agencies</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg: #f9fafb;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
             --card: #ffffff;
-            --text: #111827;
-            --text-light: #6b7280;
+            --text: #0f172a;
+            --text-muted: #64748b;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: var(--bg); 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             color: var(--text);
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
         }
-        .container {
+        .card {
             background: var(--card);
             width: 100%;
-            max-width: 450px;
+            max-width: 440px;
             padding: 48px;
-            border-radius: 40px;
-            box-shadow: 0 20px 50px rgba(79, 70, 229, 0.08);
-            border: 1px solid rgba(0,0,0,0.02);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             text-align: center;
         }
-        .logo-box {
+        .icon-box {
             width: 64px;
             height: 64px;
             background: var(--primary);
@@ -53,61 +54,61 @@ const HTML = `
             align-items: center;
             justify-content: center;
             margin: 0 auto 32px;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
             transform: rotate(3deg);
         }
-        .logo-box svg { color: white; transform: rotate(-3deg); }
-        h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 8px; }
-        p { color: var(--text-light); font-size: 14px; font-weight: 500; margin-bottom: 32px; }
+        .icon-box svg { color: white; transform: rotate(-3deg); }
+        h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 8px; }
+        p { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 32px; }
         
-        .form-group { text-align: left; margin-bottom: 24px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
         label { 
             display: block; 
-            font-size: 10px; 
-            font-weight: 900; 
+            font-size: 12px; 
+            font-weight: 700; 
             text-transform: uppercase; 
-            letter-spacing: 0.1em; 
-            color: #9ca3af;
+            letter-spacing: 0.05em; 
+            color: var(--text-muted);
             margin-bottom: 8px;
             padding-left: 4px;
         }
         input {
             width: 100%;
-            padding: 16px 20px;
-            border-radius: 16px;
-            border: 1px solid #f3f4f6;
-            background: #f9fafb;
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 600;
             outline: none;
             transition: all 0.2s;
         }
         input:focus {
             background: white;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
         button {
             width: 100%;
-            padding: 18px;
+            padding: 16px;
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 18px;
-            font-size: 14px;
-            font-weight: 900;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             margin-top: 12px;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.15);
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
         }
         button:hover { background: var(--primary-hover); transform: translateY(-1px); }
         button:active { transform: translateY(0); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .status { margin-top: 24px; padding: 16px; border-radius: 16px; font-size: 14px; font-weight: 600; display: none; }
-        .status.error { background: #fef2f2; color: #b91c1c; display: block; }
-        .status.success { background: #ecfdf5; color: #059669; display: block; }
+        .status { margin-top: 24px; padding: 16px; border-radius: 14px; font-size: 14px; font-weight: 600; display: none; }
+        .status.error { background: #fef2f2; color: #991b1b; display: block; border: 1px solid #fee2e2; }
+        .status.success { background: #f0fdf4; color: #166534; display: block; border: 1px solid #dcfce7; }
 
         .loader {
             display: none;
@@ -116,40 +117,39 @@ const HTML = `
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 1s linear infinite;
             margin: 0 auto;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div className="container">
-        <div className="logo-box">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <div class="card">
+        <div class="icon-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
         <h1>New Password</h1>
         <p>Set a secure password for your account.</p>
 
         <form id="resetForm">
-            <div className="form-group">
+            <div class="form-group">
                 <label>New Password</label>
                 <input type="password" id="password" required placeholder="••••••••" minlength="6">
             </div>
-            <div className="form-group">
+            <div class="form-group">
                 <label>Confirm Password</label>
                 <input type="password" id="confirmPassword" required placeholder="••••••••" minlength="6">
             </div>
             <button type="submit" id="submitBtn">
                 <span id="btnText">Update Password</span>
-                <div className="loader" id="loader"></div>
+                <div class="loader" id="loader"></div>
             </button>
         </form>
 
-        <div id="status" className="status"></div>
+        <div id="status" class="status"></div>
     </div>
 
     <script>
-        // Use environment variables injected by Supabase or hardcode for simplicity since it's a public client
         const supabaseUrl = 'YOUR_SUPABASE_URL';
         const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
@@ -177,9 +177,6 @@ const HTML = `
                 
                 showStatus('Password updated successfully! You can now log in to the app.', 'success');
                 form.style.display = 'none';
-                setTimeout(() => {
-                    // Try to redirect back to app or just stay
-                }, 3000);
             } catch (err) {
                 showStatus(err.message || 'Failed to update password', 'error');
             } finally {
@@ -202,14 +199,19 @@ const HTML = `
 </html>
 `;
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   // Get Supabase config from environment variables
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables");
+    return new Response("Configuration Error: Missing environment variables", { status: 500 });
+  }
 
   // Inject config into HTML
   const finalHtml = HTML

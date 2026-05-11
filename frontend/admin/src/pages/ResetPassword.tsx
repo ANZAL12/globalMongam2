@@ -26,7 +26,7 @@ export function ResetPassword() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
-  const [siteUrl, setSiteUrl] = useState('https://zefsyngtxzqhjnylzlcg.supabase.co/functions/v1/auth-reset');
+  const [siteUrl, setSiteUrl] = useState(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-reset`);
   const { showAlert, showConfirm } = useModal();
 
   useEffect(() => {
