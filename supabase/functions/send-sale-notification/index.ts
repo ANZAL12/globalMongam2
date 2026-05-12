@@ -47,13 +47,22 @@ serve(async (req) => {
       throw new Error("Missing Supabase Edge Function environment.");
     }
 
-    const authHeader = req.headers.get("Authorization") || "";
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
     if (authError || !authData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.error("Auth Error:", authError);
+      return new Response(JSON.stringify({ error: "Invalid or expired token", detail: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

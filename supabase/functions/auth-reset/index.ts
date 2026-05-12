@@ -152,13 +152,28 @@ const HTML = `
     <script>
         const supabaseUrl = 'YOUR_SUPABASE_URL';
         const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                persistSession: true,
+                detectSessionInUrl: true,
+                autoRefreshToken: true
+            }
+        });
 
         const form = document.getElementById('resetForm');
         const status = document.getElementById('status');
         const submitBtn = document.getElementById('submitBtn');
         const btnText = document.getElementById('btnText');
         const loader = document.getElementById('loader');
+
+        // Check for session on load to ensure the link is valid
+        window.addEventListener('load', async () => {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (error || !session) {
+                showStatus('The recovery link is invalid or has expired. Please request a new one from the admin.', 'error');
+                submitBtn.disabled = true;
+            }
+        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -215,13 +230,15 @@ Deno.serve(async (req: Request) => {
 
   // Inject config into HTML
   const finalHtml = HTML
-    .replace('YOUR_SUPABASE_URL', supabaseUrl)
-    .replace('YOUR_SUPABASE_ANON_KEY', supabaseAnonKey);
+    .replace('YOUR_SUPABASE_URL', supabaseUrl || '')
+    .replace('YOUR_SUPABASE_ANON_KEY', supabaseAnonKey || '');
 
   return new Response(finalHtml, {
     headers: {
       ...corsHeaders,
       "Content-Type": "text/html; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
   });
 });

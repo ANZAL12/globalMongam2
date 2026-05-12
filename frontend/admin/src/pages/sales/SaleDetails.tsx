@@ -218,6 +218,10 @@ export function SaleDetails() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
       // Call the Supabase Edge Function (handles both Firebase/FCM and Expo Push)
       const { data, error: functionError } = await supabase.functions.invoke('send-sale-notification', {
         body: {
@@ -225,7 +229,8 @@ export function SaleDetails() {
           approverId: approver.id,
         },
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         }
       });
 
