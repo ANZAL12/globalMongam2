@@ -216,18 +216,25 @@ export function SaleDetails() {
 
     setProcessing(true);
     try {
-      // Try calling the Supabase Edge Function first (best for Firebase/FCM and CORS)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Call the Supabase Edge Function (handles both Firebase/FCM and Expo Push)
       const { data, error: functionError } = await supabase.functions.invoke('send-sale-notification', {
         body: {
           saleId: sale.id,
           approverId: approver.id,
         },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        }
       });
 
-      if (!functionError && data?.success) {
+      if (functionError) throw functionError;
+      
+      if (data?.success) {
         await logActivity(
           'Notify Approver',
-          `Sent push reminder to approver ${approver.email || approver.id} via Edge Function`
+          `Sent push reminder to approver ${approver.email || approver.id}`
         );
 
         showAlert({
@@ -235,48 +242,9 @@ export function SaleDetails() {
           message: 'A push reminder was sent to the approver.',
           severity: 'success'
         });
-        return;
+      } else {
+        throw new Error(data?.error || 'Failed to send notification');
       }
-
-      console.warn('Edge function failed or returned error, falling back to direct Expo push:', functionError);
-
-      // Fallback: Direct Expo push (only if expo_push_token exists)
-      if (approver.expo_push_token) {
-        const payload = [
-          {
-            to: approver.expo_push_token,
-            title: 'Pending sale approval',
-            body: `${sale.product_name} submitted by ${sale.promoter_email} is waiting for your approval.`,
-            sound: 'default',
-            priority: 'high',
-            channelId: 'default',
-            data: {
-              type: 'sale_pending_approval',
-              sale_id: sale.id,
-            }
-          }
-        ];
-
-        const res = await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (res.ok) {
-          showAlert({
-            title: 'Notification sent',
-            message: 'A push reminder was sent via Expo direct API.',
-            severity: 'success'
-          });
-          return;
-        }
-      }
-
-      throw new Error('Could not send notification via any available provider.');
     } catch (e: any) {
       console.error('Push Notification Error:', e);
       showAlert({

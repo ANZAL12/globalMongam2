@@ -8,7 +8,6 @@ export default function ApproverLayout() {
     <Stack 
       screenOptions={{ 
         headerShown: true,
-        headerBackTitleVisible: false,
         header: () => {
           // Check if we are in any detail page to show back button
           // User requested to remove arrow from review sale page and promoter page

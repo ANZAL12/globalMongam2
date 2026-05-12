@@ -6,7 +6,6 @@ export default function PromoterLayout() {
         <Stack 
             screenOptions={{ 
                 headerShown: true,
-                headerBackTitleVisible: false,
                 header: ({ options, route }) => {
                     const showBack = route.name !== "(tabs)";
                     return <AppHeader showBackButton={showBack} />;
