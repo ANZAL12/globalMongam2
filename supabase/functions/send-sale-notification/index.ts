@@ -110,6 +110,8 @@ serve(async (req) => {
 
     let webSuccess = false;
     let expoSuccess = false;
+    let webErrorDetail = null;
+    let expoErrorDetail = null;
 
     // --- Send via Firebase (Web/Native FCM) ---
     if (approver.fcm_web_push_token) {
@@ -130,6 +132,7 @@ serve(async (req) => {
         webSuccess = true;
       } catch (e) {
         console.error("FCM Send Error:", e);
+        webErrorDetail = e.message;
       }
     }
 
@@ -153,16 +156,23 @@ serve(async (req) => {
             }
           }),
         });
-        if (response.ok) expoSuccess = true;
+        if (response.ok) {
+          expoSuccess = true;
+        } else {
+          expoErrorDetail = await response.text();
+        }
       } catch (e) {
         console.error("Expo Send Error:", e);
+        expoErrorDetail = e.message;
       }
     }
 
     return new Response(JSON.stringify({ 
       success: webSuccess || expoSuccess,
       web_sent: webSuccess,
-      expo_sent: expoSuccess
+      web_error: webErrorDetail,
+      expo_sent: expoSuccess,
+      expo_error: expoErrorDetail
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

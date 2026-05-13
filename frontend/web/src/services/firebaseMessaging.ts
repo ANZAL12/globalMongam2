@@ -71,12 +71,24 @@ export async function syncWebPushToken() {
   if (tokenSyncStarted) return;
   tokenSyncStarted = true;
 
+  console.log('🔔 [Push] Starting web push token synchronization...');
+
   try {
     const messagingInstance = await getMessagingInstance();
-    if (!messagingInstance || !('Notification' in window)) return;
+    if (!messagingInstance) {
+      console.warn('🔔 [Push] Firebase messaging instance could not be initialized.');
+      return;
+    }
+    
+    if (!('Notification' in window)) {
+      console.warn('🔔 [Push] This browser does not support desktop notifications.');
+      return;
+    }
+
+    console.log('🔔 [Push] Current notification permission:', Notification.permission);
 
     if (Notification.permission === 'denied') {
-      console.warn('Browser notification permission has been blocked.');
+      console.warn('🔔 [Push] Browser notification permission has been blocked by the user.');
       return;
     }
 
@@ -84,31 +96,52 @@ export async function syncWebPushToken() {
       ? 'granted'
       : await Notification.requestPermission();
 
-    if (permission !== 'granted') return;
+    console.log('🔔 [Push] Permission result:', permission);
 
+    if (permission !== 'granted') {
+      console.warn('🔔 [Push] Notification permission was not granted.');
+      return;
+    }
+
+    console.log('🔔 [Push] Registering service worker...');
     const serviceWorkerRegistration = await registerMessagingServiceWorker();
-    if (!serviceWorkerRegistration) return;
+    if (!serviceWorkerRegistration) {
+      console.error('🔔 [Push] Failed to register service worker.');
+      return;
+    }
 
+    console.log('🔔 [Push] Fetching FCM token...');
     const token = await getToken(messagingInstance, {
       vapidKey,
       serviceWorkerRegistration,
     });
 
-    if (!token) return;
+    if (!token) {
+      console.error('🔔 [Push] No registration token available. Request permission to generate one.');
+      return;
+    }
+
+    console.log('🔔 [Push] FCM Token generated successfully');
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.warn('🔔 [Push] No authenticated user found, skipping token sync.');
+      return;
+    }
 
+    console.log('🔔 [Push] Updating user record in Supabase...');
     const { error } = await supabase
       .from('users')
       .update({ fcm_web_push_token: token })
       .eq('id', user.id);
 
     if (error) {
-      console.error('Failed to save browser push token:', error);
+      console.error('🔔 [Push] Failed to save browser push token to database:', error);
+    } else {
+      console.log('🔔 [Push] Token successfully synced to database for user:', user.email);
     }
   } catch (error) {
-    console.error('Failed to sync browser push token:', error);
+    console.error('🔔 [Push] Failed to sync browser push token:', error);
   }
 }
 
@@ -120,6 +153,7 @@ export async function startForegroundPushListener() {
   if (!messagingInstance) return;
 
   onMessage(messagingInstance, async (payload) => {
+    console.log('🔔 [Push] Foreground message received:', payload);
     const title = payload.notification?.title || 'New notification';
     const body = payload.notification?.body || '';
     const url = payload.data?.url || '/';
@@ -133,6 +167,7 @@ export async function startForegroundPushListener() {
       badge: '/favicon.png',
       data: { url },
     });
+    console.log('🔔 [Push] Foreground notification displayed');
   });
 }
 

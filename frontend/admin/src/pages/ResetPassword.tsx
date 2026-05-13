@@ -26,7 +26,8 @@ export function ResetPassword() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
-  const [siteUrl, setSiteUrl] = useState(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-reset`);
+  const defaultRecoveryUrl = import.meta.env.VITE_PASSWORD_RESET_REDIRECT_URL || 'globalagencies://reset-password';
+  const [siteUrl, setSiteUrl] = useState(defaultRecoveryUrl);
   const { showAlert, showConfirm } = useModal();
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export function ResetPassword() {
             <div className="flex items-center justify-between px-1">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
                 <Shield className="h-3 w-3 mr-1.5" />
-                Recovery Page URL (Supabase Edge Function)
+                Recovery Page URL
               </label>
             </div>
             <div className="relative">
@@ -116,14 +117,14 @@ export function ResetPassword() {
               </div>
               <input
                 type="text"
-                placeholder="https://your-project.supabase.co/functions/v1/auth-reset"
+                placeholder="globalagencies://reset-password"
                 className="w-full pl-14 pr-4 py-3 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-500 transition-all outline-none font-medium text-sm text-gray-600"
                 value={siteUrl}
                 onChange={(e) => setSiteUrl(e.target.value)}
               />
             </div>
             <p className="text-[10px] text-gray-400 font-medium italic pl-1">
-              This URL will be sent in the email. We've pre-filled it with your standalone Supabase Edge Function.
+              This URL will be sent in the email. It should open the Electron app's update password page.
             </p>
           </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { GoogleLogin } from '@react-oauth/google';
+import { syncWebPushToken } from '../services/firebaseMessaging';
 
 type PendingLogin = {
     accessToken: string;
@@ -54,12 +55,19 @@ export default function Login() {
         void bootstrapForcedPasswordChange();
     }, []);
 
-    const finalizeLogin = (accessToken: string, role: string) => {
+    const finalizeLogin = async (accessToken: string, role: string) => {
         localStorage.setItem('access', accessToken);
         localStorage.setItem('role', role);
-        if (role === 'admin') navigate('/admin');
-        else if (role === 'approver') navigate('/approver');
-        else navigate('/promoter');
+        
+        if (role === 'admin') {
+            navigate('/admin');
+        } else if (role === 'approver') {
+            await syncWebPushToken();
+            navigate('/approver');
+        } else {
+            await syncWebPushToken();
+            navigate('/promoter');
+        }
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -80,7 +88,6 @@ export default function Login() {
 
             if (authError) throw authError;
 
-            // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('role, is_active, must_change_password')
@@ -126,7 +133,6 @@ export default function Login() {
 
             if (authError) throw authError;
 
-            // Fetch user role
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('role, is_active, must_change_password')
@@ -134,7 +140,6 @@ export default function Login() {
                 .single();
 
             if (userError) {
-                // If user doesn't exist in 'users' table, log them out
                 await supabase.auth.signOut();
                 throw new Error('Not Registered. Please contact the admin.');
             }

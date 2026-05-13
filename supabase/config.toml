@@ -1,0 +1,2 @@
+[functions.auth-reset]
+verify_jwt = false

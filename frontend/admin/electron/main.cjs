@@ -18,6 +18,48 @@ cloudinary.config({
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow;
+let pendingDeepLinkUrl = null;
+
+const protocolClientArgs = isDev ? [process.execPath, path.resolve(__dirname, '..')] : [];
+app.setAsDefaultProtocolClient('globalagencies', process.execPath, protocolClientArgs);
+
+function getDeepLinkUrl(argv = []) {
+  return argv.find((arg) => typeof arg === 'string' && arg.startsWith('globalagencies://')) || null;
+}
+
+function getResetRouteFromDeepLink(url) {
+  if (!url || !url.startsWith('globalagencies://reset-password')) {
+    return null;
+  }
+
+  const fragment = url.includes('#') ? url.slice(url.indexOf('#') + 1) : '';
+  return fragment ? `/update-password?${fragment}` : '/update-password';
+}
+
+function loadAppRoute(route = '/') {
+  const hash = route.startsWith('/') ? route : `/${route}`;
+
+  if (isDev) {
+    mainWindow.loadURL(`http://localhost:5173/#${hash}`);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash });
+  }
+}
+
+function handleDeepLink(url) {
+  const route = getResetRouteFromDeepLink(url);
+  if (!route) return;
+
+  if (!mainWindow) {
+    pendingDeepLinkUrl = url;
+    return;
+  }
+
+  loadAppRoute(route);
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -36,13 +78,12 @@ function createWindow() {
     show: false // Don't show until ready-to-show
   });
 
-  // Load the app
+  const initialRoute = getResetRouteFromDeepLink(pendingDeepLinkUrl);
+  pendingDeepLinkUrl = null;
+  loadAppRoute(initialRoute || '/');
+
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
-  } else {
-    // In production, load the built index.html
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
   // Optimize window showing
@@ -74,7 +115,8 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
+    handleDeepLink(getDeepLinkUrl(argv));
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -82,10 +124,16 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
+    pendingDeepLinkUrl = getDeepLinkUrl(process.argv);
     registerCloudinaryHandlers();
     createWindow();
   });
 }
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
 
 function registerCloudinaryHandlers() {
   console.log('Registering Cloudinary IPC Handlers...');

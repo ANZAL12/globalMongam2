@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useModal } from '../context/ModalContext';
@@ -9,21 +9,44 @@ export function UpdatePassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingLink, setCheckingLink] = useState(true);
+  const [linkReady, setLinkReady] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const { showAlert } = useModal();
+  const recoveryParams = useMemo(() => new URLSearchParams(window.location.hash.split('?')[1] || ''), []);
 
   useEffect(() => {
-    // Check if we have a session (Supabase handles the recovery token automatically)
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // If no session, they might have clicked an expired link or are trying to access directly
-        console.log('No active session found for password reset');
+      const accessToken = recoveryParams.get('access_token');
+      const refreshToken = recoveryParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (error) {
+          showAlert({
+            title: 'Invalid reset link',
+            message: 'This password reset link is invalid or expired. Please request a new one.',
+            severity: 'error'
+          });
+          setCheckingLink(false);
+          return;
+        }
+
+        window.history.replaceState(null, '', `${window.location.pathname}#/update-password`);
       }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      setLinkReady(Boolean(session));
+      setCheckingLink(false);
     };
+
     checkSession();
-  }, []);
+  }, [recoveryParams, showAlert]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +105,33 @@ export function UpdatePassword() {
               <p className="text-gray-500 font-medium">Your password has been changed successfully.</p>
             </div>
             <p className="text-sm text-gray-400">Redirecting you to login page...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (checkingLink) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-12 px-4 shadow-xl shadow-indigo-100/50 rounded-[2.5rem] border border-gray-100 text-center space-y-6">
+            <Loader2 className="h-10 w-10 text-indigo-600 animate-spin mx-auto" />
+            <p className="text-gray-500 font-medium">Checking reset link...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!linkReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-12 px-8 shadow-xl shadow-indigo-100/50 rounded-[2.5rem] border border-gray-100 text-center space-y-4">
+            <Lock className="h-10 w-10 text-gray-300 mx-auto" />
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Reset Link Required</h2>
+            <p className="text-gray-500 font-medium">Open this page from the password reset email, or request a new reset link from Account Recovery.</p>
           </div>
         </div>
       </div>

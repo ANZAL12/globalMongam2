@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
+import { syncWebPushToken } from '../../services/firebaseMessaging';
+import { Bell, AlertTriangle } from 'lucide-react';
 
 type Sale = {
     id: string;
@@ -9,6 +11,39 @@ type Sale = {
 export default function ApproverDashboard() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+    useEffect(() => {
+        setNotificationsEnabled(Notification.permission === 'granted');
+    }, []);
+
+    const handleTestNotification = () => {
+        if (!('Notification' in window)) {
+            alert('Notifications not supported');
+            return;
+        }
+        if (Notification.permission !== 'granted') {
+            alert('Please enable notifications first');
+            return;
+        }
+
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification('Test Notification', {
+                body: 'Great! Your laptop is correctly receiving and showing notifications.',
+                icon: '/logo.png',
+                badge: '/favicon.png',
+                tag: 'test-push'
+            });
+        });
+    };
+
+    const handleEnableNotifications = async () => {
+        await syncWebPushToken();
+        setNotificationsEnabled(Notification.permission === 'granted');
+        if (Notification.permission === 'granted') {
+            handleTestNotification();
+        }
+    };
 
     useEffect(() => {
         const fetchSales = async () => {
@@ -63,7 +98,39 @@ export default function ApproverDashboard() {
 
     return (
         <div className="flex-1 p-[20px] bg-[#f5f5f5]">
-            <h1 className="text-[24px] font-bold text-[#333] mb-[20px]">Approver Overview</h1>
+            <div className="flex justify-between items-center mb-[20px]">
+                <h1 className="text-[24px] font-bold text-[#333]">Approver Overview</h1>
+                {notificationsEnabled && (
+                    <button 
+                        onClick={handleTestNotification}
+                        className="text-[14px] text-[#1976d2] hover:underline flex items-center gap-[5px]"
+                    >
+                        <Bell size={16} />
+                        Test Notification
+                    </button>
+                )}
+            </div>
+
+            {!notificationsEnabled && (
+                <div className="bg-orange-50 border border-orange-200 rounded-[15px] p-[20px] mb-[20px] flex items-center justify-between">
+                    <div className="flex items-center gap-[15px]">
+                        <div className="bg-orange-100 p-[10px] rounded-full">
+                            <AlertTriangle className="text-orange-600" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-orange-900">Notifications Disabled</h3>
+                            <p className="text-orange-700 text-sm">Enable notifications to receive alerts for new sales pending approval.</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleEnableNotifications}
+                        className="bg-orange-600 text-white px-[20px] py-[10px] rounded-[10px] font-bold flex items-center gap-[8px] hover:bg-orange-700 transition-colors"
+                    >
+                        <Bell size={18} />
+                        Enable Now
+                    </button>
+                </div>
+            )}
 
             <div className="flex flex-col gap-[15px]">
                 <div className="bg-white p-[20px] rounded-[10px] shadow-[0_5px_5px_rgba(0,0,0,0.1)] border-l-[5px] border-l-[#1976d2]">

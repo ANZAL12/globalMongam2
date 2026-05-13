@@ -241,14 +241,14 @@ export function SaleDetails() {
           'Notify Approver',
           `Sent push reminder to approver ${approver.email || approver.id}`
         );
-
         showAlert({
-          title: 'Notification sent',
-          message: 'A push reminder was sent to the approver.',
+          title: 'Notification Sent',
+          message: 'A push reminder was successfully sent to the approver.',
           severity: 'success'
         });
       } else {
-        throw new Error(data?.error || 'Failed to send notification');
+        const errorMessage = data?.web_error || data?.expo_error || 'Failed to send notification';
+        throw new Error(errorMessage);
       }
     } catch (e: any) {
       console.error('Push Notification Error:', e);

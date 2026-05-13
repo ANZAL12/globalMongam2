@@ -23,6 +23,14 @@
       "electron/**/*",
       ".env"
     ],
+    "protocols": [
+      {
+        "name": "Global Agencies",
+        "schemes": [
+          "globalagencies"
+        ]
+      }
+    ],
     "asar": true,
     "win": {
       "target": "nsis",

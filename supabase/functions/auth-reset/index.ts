@@ -1,9 +1,14 @@
 /// <reference lib="deno.ns" />
-import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const htmlHeaders = {
+  ...corsHeaders,
+  "content-type": "text/html; charset=utf-8",
+  "cache-control": "no-cache, no-store, must-revalidate",
 };
 
 const HTML = `
@@ -134,11 +139,11 @@ const HTML = `
         <form id="resetForm">
             <div class="form-group">
                 <label>New Password</label>
-                <input type="password" id="password" required placeholder="••••••••" minlength="6">
+                <input type="password" id="password" required placeholder="Password" minlength="6">
             </div>
             <div class="form-group">
                 <label>Confirm Password</label>
-                <input type="password" id="confirmPassword" required placeholder="••••••••" minlength="6">
+                <input type="password" id="confirmPassword" required placeholder="Confirm password" minlength="6">
             </div>
             <button type="submit" id="submitBtn">
                 <span id="btnText">Update Password</span>
@@ -233,12 +238,7 @@ Deno.serve(async (req: Request) => {
     .replace('YOUR_SUPABASE_URL', supabaseUrl || '')
     .replace('YOUR_SUPABASE_ANON_KEY', supabaseAnonKey || '');
 
-  return new Response(finalHtml, {
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/html; charset=utf-8",
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    },
+  return new Response(new Blob([finalHtml], { type: "text/html; charset=utf-8" }), {
+    headers: htmlHeaders,
   });
 });
