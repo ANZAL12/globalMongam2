@@ -216,40 +216,42 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] p-5">
-            <div className="w-full max-w-md bg-white rounded-[15px] p-[25px] shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
+        <div className="min-h-screen h-[100dvh] flex items-center justify-center bg-[#f0f2f5] p-4 sm:p-5">
+            <div className="w-full max-w-md bg-white rounded-[15px] p-5 sm:p-[25px] shadow-[0_2px_10px_rgba(0,0,0,0.1)] flex flex-col justify-center max-h-full">
 
-                <div className="flex justify-center mb-10">
-                    <img src="/logo.png" alt="Global Agencies Logo" className="h-44 object-contain" />
+                <div className="flex justify-center mb-4 sm:mb-10 shrink-0">
+                    <img src="/logo.png" alt="Global Agencies Logo" className="h-[12vh] min-h-[60px] max-h-[176px] sm:h-44 object-contain" />
                 </div>
-                <h1 className="text-[28px] font-bold text-[#1a1a1a] text-center mb-[5px]">Welcome Back</h1>
-                <p className="text-[16px] text-[#666] text-center mb-[30px]">Sign in to your account</p>
+                <div className="shrink-0">
+                    <h1 className="text-[22px] sm:text-[28px] font-bold text-[#1a1a1a] text-center mb-1 sm:mb-[5px]">Welcome Back</h1>
+                    <p className="text-sm sm:text-[16px] text-[#666] text-center mb-4 sm:mb-[30px]">Sign in to your account</p>
+                </div>
 
-                <form onSubmit={handleLogin}>
+                <form onSubmit={handleLogin} className="flex flex-col shrink">
                     {error && (
-                        <div className="bg-[#ffebee] text-[#c62828] p-3 rounded-[10px] text-sm mb-4 text-center font-medium">
+                        <div className="bg-[#ffebee] text-[#c62828] p-2 sm:p-3 rounded-[10px] text-xs sm:text-sm mb-3 sm:mb-4 text-center font-medium shrink-0">
                             {error}
                         </div>
                     )}
 
-                    <div className="mb-[20px]">
-                        <label className="block text-[14px] font-[600] text-[#444] mb-[8px]">Email Address</label>
+                    <div className="mb-3 sm:mb-[20px] shrink-0">
+                        <label className="block text-xs sm:text-[14px] font-[600] text-[#444] mb-1 sm:mb-[8px]">Email Address</label>
                         <input
                             type="text"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[15px] text-[16px] outline-none focus:border-[#1976d2]"
+                            className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-3 sm:p-[15px] text-sm sm:text-[16px] outline-none focus:border-[#1976d2]"
                             placeholder="email@example.com"
                         />
                     </div>
 
-                    <div className="mb-[20px]">
-                        <label className="block text-[14px] font-[600] text-[#444] mb-[8px]">Password</label>
+                    <div className="mb-3 sm:mb-[20px] shrink-0">
+                        <label className="block text-xs sm:text-[14px] font-[600] text-[#444] mb-1 sm:mb-[8px]">Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[15px] text-[16px] outline-none focus:border-[#1976d2]"
+                            className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-3 sm:p-[15px] text-sm sm:text-[16px] outline-none focus:border-[#1976d2]"
                             placeholder="********"
                         />
                     </div>
@@ -257,22 +259,22 @@ export default function Login() {
                     <button
                         type="submit"
                         disabled={loading || googleLoading}
-                        className={`w-full bg-[#1976d2] rounded-[10px] p-[15px] flex items-center justify-center mt-[10px] ${(loading || googleLoading) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-[#1976d2] rounded-[10px] p-3 sm:p-[15px] flex items-center justify-center mt-2 sm:mt-[10px] shrink-0 ${(loading || googleLoading) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                         {loading ? (
                             <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                         ) : (
-                            <span className="text-white text-[18px] font-bold">Login</span>
+                            <span className="text-white text-base sm:text-[18px] font-bold">Login</span>
                         )}
                     </button>
 
-                    <div className="flex flex-row items-center my-[25px]">
+                    <div className="flex flex-row items-center my-3 sm:my-[25px] shrink-0">
                         <div className="flex-1 h-[1px] bg-[#e1e1e1]" />
-                        <span className="mx-[15px] text-[#999] font-[600] text-[14px]">OR</span>
+                        <span className="mx-[10px] sm:mx-[15px] text-[#999] font-[600] text-xs sm:text-[14px]">OR</span>
                         <div className="flex-1 h-[1px] bg-[#e1e1e1]" />
                     </div>
 
-                    <div className="flex justify-center w-full">
+                    <div className="flex justify-center w-full shrink-0">
                         {googleLoading ? (
                             <div className="w-full bg-white border border-[#dcdcdc] rounded-[10px] p-[15px] flex items-center justify-center opacity-60">
                                 <span className="w-5 h-5 border-2 border-[#1976d2]/40 border-t-[#1976d2] rounded-full animate-spin" />
