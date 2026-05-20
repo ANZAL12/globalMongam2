@@ -216,8 +216,13 @@ export function SaleDetails() {
 
     setProcessing(true);
     try {
+      // Call getUser() first to force token validation and auto-refresh the session if it's expired
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Your session has expired or is invalid. Please log in again.');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         throw new Error('Your session has expired. Please log in again.');
       }
@@ -227,10 +232,6 @@ export function SaleDetails() {
         body: {
           saleId: sale.id,
           approverId: approver.id,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         }
       });
 
@@ -252,9 +253,23 @@ export function SaleDetails() {
       }
     } catch (e: any) {
       console.error('Push Notification Error:', e);
+      let errorMessage = e?.message || 'Could not send push notification.';
+      
+      // If it's a FunctionsHttpError, the response body is available in e.context
+      if (e.context && typeof e.context.json === 'function') {
+        try {
+          const body = await e.context.json();
+          if (body?.error) {
+            errorMessage = `${body.error}${body.detail ? `: ${body.detail}` : ''}`;
+          }
+        } catch (jsonErr) {
+          console.error('Failed to parse error response body:', jsonErr);
+        }
+      }
+
       showAlert({
         title: 'Failed to send',
-        message: e?.message || 'Could not send push notification. Please ensure the approver has enabled notifications.',
+        message: errorMessage,
         severity: 'error'
       });
     } finally {

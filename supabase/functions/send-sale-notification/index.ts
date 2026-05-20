@@ -108,6 +108,18 @@ serve(async (req) => {
     const body = `${sale.product_name} submitted by ${sale.promoter?.full_name || sale.promoter?.email} needs your review.`;
     const url = `/approver/sale/${saleId}`;
 
+    if (!approver.fcm_web_push_token && !approver.expo_push_token) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        web_sent: false,
+        web_error: "Approver has not enabled browser notifications (no web push token found). Please ask them to log in to the Vercel web app and click 'Enable Now'.",
+        expo_sent: false,
+        expo_error: "Approver has no registered mobile push token."
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let webSuccess = false;
     let expoSuccess = false;
     let webErrorDetail = null;

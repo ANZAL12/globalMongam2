@@ -184,6 +184,9 @@ export function Announcements({ targetRole }: AnnouncementPageProps) {
   const sendWebPushNotifications = async (announcementId: string, targetIds: string[]) => {
     if (targetIds.length === 0) return;
 
+    // Force a token validation & auto-refresh before invoking the Edge Function
+    await supabase.auth.getUser();
+
     const { error } = await supabase.functions.invoke('send-web-announcement-push', {
       body: {
         announcementId,
