@@ -216,14 +216,25 @@ export function SaleDetails() {
 
     setProcessing(true);
     try {
-      // Call getUser() first to force token validation and auto-refresh the session if it's expired
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error('Your session has expired or is invalid. Please log in again.');
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // 1. Get the current local session
+      let { data: { session } } = await supabase.auth.getSession();
+      
+      // 2. If we have a local session, run getUser() to force a silent token validation & refresh if expired
+      if (session) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.warn('🔔 [Auth] getUser validation failed, attempting manual session refresh:', userError.message);
+          
+          // Attempt manual refresh before giving up
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError || !refreshData.session) {
+            console.error('🔔 [Auth] Manual session refresh failed:', refreshError);
+            throw new Error('Your session has expired. Please log out from the top-right menu and log in again.');
+          }
+          
+          session = refreshData.session;
+        }
+      } else {
         throw new Error('Your session has expired. Please log in again.');
       }
 

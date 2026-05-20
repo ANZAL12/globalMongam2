@@ -44,7 +44,7 @@ export default function Layout() {
             ? [
                 { name: 'Dashboard', path: '/approver', icon: LayoutDashboard },
                 { name: 'Review Sales', path: '/approver/sales', icon: List },
-                { name: 'Announcements', path: '/approver/announcements', icon: Megaphone },
+                { name: 'Announce', path: '/approver/announcements', icon: Megaphone },
                 { name: 'My Promoters', path: '/approver/my-promoters', icon: Users },
                 { name: 'Add Promoter', path: '/approver/add-promoter', icon: PlusCircle }
             ]
@@ -53,7 +53,7 @@ export default function Layout() {
                 { name: 'Dashboard', path: '/promoter', icon: LayoutDashboard },
                 { name: 'Upload Sale', path: '/promoter/add-sale', icon: PlusCircle },
                 { name: 'My Sales', path: '/promoter/sales', icon: List },
-                { name: 'Announcements', path: '/promoter/announcements', icon: Megaphone }
+                { name: 'Announce', path: '/promoter/announcements', icon: Megaphone }
             ]
             : [];
 
@@ -62,23 +62,25 @@ export default function Layout() {
             {/* Main App Container enforcing a mobile aspect ratio on desktop */}
             <div className="w-full max-w-md bg-[#f5f5f5] h-full min-h-0 flex flex-col relative shadow-xl overflow-hidden border-x border-gray-200">
 
-                {/* Mobile Header matching `headerShown: true` from expo-router */}
-                <header className="flex shrink-0 items-center justify-between px-4 h-20 bg-white border-b border-gray-200 shadow-sm">
-                    <div className="relative h-20 w-48 overflow-hidden">
-                        <img src="/logo.png" alt="Global Agencies Logo" className="absolute left-[0px] top-[65%] -translate-y-1/2 h-20 scale-[2.2] object-contain origin-left" />
+                {/* Mobile Header with Safe Area spacing to avoid notch overlap */}
+                <header className="flex shrink-0 flex-col bg-white border-b border-gray-200 shadow-sm pt-[env(safe-area-inset-top,0px)]">
+                    <div className="flex items-center justify-between px-4 h-16 w-full">
+                        <div className="relative h-16 w-48 overflow-hidden">
+                            <img src="/logo.png" alt="Global Agencies Logo" className="absolute left-[0px] top-[60%] -translate-y-1/2 h-16 scale-[2.2] object-contain origin-left" />
+                        </div>
+                        <button onClick={() => setShowLogoutConfirm(true)} className="p-2 animate-none" aria-label="Sign out">
+                            <LogOut size={24} color="#f00" />
+                        </button>
                     </div>
-                    <button onClick={() => setShowLogoutConfirm(true)} className="p-2" aria-label="Sign out">
-                        <LogOut size={24} color="#f00" />
-                    </button>
                 </header>
 
-                {/* Main View Area */}
-                <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                {/* Main View Area with bottom padding to ensure contents scroll past bottom tabs */}
+                <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-28">
                     <Outlet />
                 </main>
 
-                {/* Bottom Navigation matching `<Tabs>` */}
-                <nav className="shrink-0 bg-white border-t border-gray-200 pb-safe z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                {/* Bottom Navigation with safe-area padding for home indicator */}
+                <nav className="shrink-0 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom,0px)] z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-around items-center h-[60px] px-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
