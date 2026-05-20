@@ -17,32 +17,9 @@ export default function ApproverDashboard() {
         setNotificationsEnabled(Notification.permission === 'granted');
     }, []);
 
-    const handleTestNotification = () => {
-        if (!('Notification' in window)) {
-            alert('Notifications not supported');
-            return;
-        }
-        if (Notification.permission !== 'granted') {
-            alert('Please enable notifications first');
-            return;
-        }
-
-        navigator.serviceWorker.ready.then(registration => {
-            registration.showNotification('Test Notification', {
-                body: 'Great! Your laptop is correctly receiving and showing notifications.',
-                icon: '/logo.png',
-                badge: '/favicon.png',
-                tag: 'test-push'
-            });
-        });
-    };
-
     const handleEnableNotifications = async () => {
         await syncWebPushToken(true);
         setNotificationsEnabled(Notification.permission === 'granted');
-        if (Notification.permission === 'granted') {
-            handleTestNotification();
-        }
     };
 
     useEffect(() => {
@@ -100,15 +77,6 @@ export default function ApproverDashboard() {
         <div className="flex-1 p-[20px] bg-[#f5f5f5]">
             <div className="flex justify-between items-center mb-[20px]">
                 <h1 className="text-[24px] font-bold text-[#333]">Approver Overview</h1>
-                {notificationsEnabled && (
-                    <button 
-                        onClick={handleTestNotification}
-                        className="text-[14px] text-[#1976d2] hover:underline flex items-center gap-[5px]"
-                    >
-                        <Bell size={16} />
-                        Test Notification
-                    </button>
-                )}
             </div>
 
             {!notificationsEnabled && (
