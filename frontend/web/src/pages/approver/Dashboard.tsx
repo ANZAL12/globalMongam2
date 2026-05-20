@@ -38,7 +38,7 @@ export default function ApproverDashboard() {
     };
 
     const handleEnableNotifications = async () => {
-        await syncWebPushToken();
+        await syncWebPushToken(true);
         setNotificationsEnabled(Notification.permission === 'granted');
         if (Notification.permission === 'granted') {
             handleTestNotification();

@@ -67,8 +67,18 @@ async function registerMessagingServiceWorker() {
   return navigator.serviceWorker.register(`/firebase-messaging-sw.js?${query}`);
 }
 
-export async function syncWebPushToken() {
-  if (tokenSyncStarted) return;
+export async function syncWebPushToken(isManual = false) {
+  if (tokenSyncStarted && !isManual) return;
+
+  if (!('Notification' in window)) {
+    console.warn('🔔 [Push] This browser does not support desktop notifications.');
+    return;
+  }
+
+  if (!isManual && Notification.permission !== 'granted') {
+    return;
+  }
+
   tokenSyncStarted = true;
 
   console.log('🔔 [Push] Starting web push token synchronization...');
@@ -77,11 +87,6 @@ export async function syncWebPushToken() {
     const messagingInstance = await getMessagingInstance();
     if (!messagingInstance) {
       console.warn('🔔 [Push] Firebase messaging instance could not be initialized.');
-      return;
-    }
-    
-    if (!('Notification' in window)) {
-      console.warn('🔔 [Push] This browser does not support desktop notifications.');
       return;
     }
 
