@@ -459,6 +459,19 @@ export function SaleDetails() {
                 </div>
               </div>
 
+              {/* Approver Notes */}
+              {sale.approver_notes && (
+                <div className="mt-8 pt-8 border-t border-gray-50">
+                  <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-indigo-500" />
+                    Approver Notes
+                  </h3>
+                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-700 italic">
+                    "{sale.approver_notes}"
+                  </div>
+                </div>
+              )}
+
               {/* Bill Image */}
               {sale.bill_image_url && (
                 <div className="mt-12 pt-12 border-t border-gray-50">

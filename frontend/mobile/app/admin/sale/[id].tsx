@@ -23,6 +23,7 @@ type SaleDetail = {
     promoter_phone: string | null;
     promoter_gpay: string | null;
     promoter_upi: string | null;
+    approver_notes?: string | null;
 };
 
 export default function SaleDetailScreen() {
@@ -231,6 +232,13 @@ export default function SaleDetailScreen() {
                     <View style={{ marginTop: 15 }}>
                         <Text style={styles.label}>Transaction ID</Text>
                         <Text style={styles.value}>{sale.transaction_id}</Text>
+                    </View>
+                )}
+
+                {sale.approver_notes && (
+                    <View style={{ marginTop: 15, padding: 12, backgroundColor: '#f9f9f9', borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#1976d2' }}>
+                        <Text style={[styles.label, { color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }]}>Approver Notes</Text>
+                        <Text style={[styles.value, { marginBottom: 0, fontStyle: 'italic' }]}>"{sale.approver_notes}"</Text>
                     </View>
                 )}
 

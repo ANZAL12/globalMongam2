@@ -27,6 +27,7 @@ export type Sale = {
   bill_image_url?: string | null;
   promoter_name?: string | null;
   promoter_upi?: string | null;
+  approver_notes?: string | null;
 };
 
 export type Promoter = {

@@ -23,6 +23,7 @@ type SaleDetail = {
     promoter_phone: string | null;
     promoter_gpay: string | null;
     promoter_upi: string | null;
+    approver_notes?: string | null;
 };
 
 export default function AdminSaleDetail() {
@@ -219,6 +220,7 @@ export default function AdminSaleDetail() {
                     )}
 
                     {sale.transaction_id && <Info label="Transaction ID" value={sale.transaction_id} />}
+                    {sale.approver_notes && <Info label="Approver Notes" value={sale.approver_notes} />}
 
                     {isProcessing ? (
                         <div className="flex justify-center mt-[20px] border-t border-[#eee] pt-[20px]">

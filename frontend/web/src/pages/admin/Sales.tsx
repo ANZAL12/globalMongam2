@@ -14,6 +14,7 @@ type Sale = {
     incentive_amount: string | null;
     payment_status: string;
     created_at: string;
+    approver_notes?: string | null;
 };
 
 export default function AdminSales() {
@@ -130,6 +131,12 @@ export default function AdminSales() {
                             <p className="text-[14px] text-[#666] mb-[10px] border-b border-[#eee] pb-[10px]">
                                 {item.promoter_email}
                             </p>
+
+                            {item.approver_notes && (
+                                <p className="text-[13px] text-[#666] italic bg-[#f9f9f9] p-[8px] rounded-[6px] border-l-4 border-l-[#1976d2] mb-[10px]">
+                                    Note: {item.approver_notes}
+                                </p>
+                            )}
 
                             <div className="flex flex-row justify-between">
                                 <div>

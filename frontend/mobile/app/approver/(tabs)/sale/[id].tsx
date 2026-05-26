@@ -39,6 +39,7 @@ export default function ApproverSaleDetails() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -79,6 +80,7 @@ export default function ApproverSaleDetails() {
         .update({
           status,
           approved_by: status === "approver_approved" ? user?.id : null,
+          approver_notes: notes || null,
         })
         .eq("id", id);
 
@@ -212,6 +214,14 @@ export default function ApproverSaleDetails() {
         </View>
       )}      {sale.status === "pending" && (
         <View style={styles.actionCard}>
+          <Text style={[styles.label, { marginBottom: 8 }]}>Notes (Optional)</Text>
+          <TextInput
+            style={styles.textInput}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add notes for admin..."
+            multiline={true}
+          />
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.actionButton, styles.rejectButton]}

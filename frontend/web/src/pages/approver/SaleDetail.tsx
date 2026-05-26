@@ -11,6 +11,7 @@ export default function ApproverSaleDetail() {
     const [processing, setProcessing] = useState(false);
     const [duplicateCount, setDuplicateCount] = useState(0);
     const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
+    const [notes, setNotes] = useState('');
 
     const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
 
@@ -74,7 +75,8 @@ export default function ApproverSaleDetail() {
                 .update({ 
                     status: newStatus,
                     approved_at: newStatus === 'approver_approved' ? new Date().toISOString() : null,
-                    approved_by: (await supabase.auth.getUser()).data.user?.id
+                    approved_by: (await supabase.auth.getUser()).data.user?.id,
+                    approver_notes: notes || null
                 })
                 .eq('id', id);
 
@@ -206,6 +208,21 @@ export default function ApproverSaleDetail() {
                         <img src={sale.bill_image_url} alt="Bill" className="w-full h-auto object-contain max-h-[300px]" />
                     </div>
                 </div>
+
+                {/* Approver Notes */}
+                {sale.status === 'pending' && (
+                    <div className="bg-white rounded-2xl p-5 shadow-sm space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+                            Approver Notes (Optional)
+                        </label>
+                        <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Add notes or feedback about this sale..."
+                            className="w-full bg-gray-50 border-none px-4 py-3 rounded-2xl text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none min-h-[100px] resize-none"
+                        />
+                    </div>
+                )}
 
                 {/* Action Buttons */}
                 {sale.status === 'pending' && (
