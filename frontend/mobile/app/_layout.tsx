@@ -204,8 +204,13 @@ function RootLayoutNav() {
     const segment0 = segments[0] as string | undefined;
     const inAuthGroup =
       segment0 === "login" ||
+      segment0 === "reset-password" ||
       segment0 === "oauth2redirect" ||
       segment0 === "oauthredirect";
+
+    if (segment0 === "reset-password") {
+      return;
+    }
 
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to login

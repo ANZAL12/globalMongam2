@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/GLOBAL2.png",
     "scheme": [
+      "globalagencies",
       "global-agencies",
       "com.globalagencies2.mobile",
       "com.googleusercontent.apps.389146058293-s9rjophl6kkbu893v3b6lionf93pf2e6",

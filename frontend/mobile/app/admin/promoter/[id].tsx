@@ -23,6 +23,7 @@ interface Sale {
     status: string;
     incentive_amount: string;
     payment_status: string;
+    paid_at: string | null;
     created_at: string;
 }
 

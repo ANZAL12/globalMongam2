@@ -7,8 +7,8 @@ const corsHeaders = {
 
 const htmlHeaders = {
   ...corsHeaders,
-  "content-type": "text/html; charset=utf-8",
-  "cache-control": "no-cache, no-store, must-revalidate",
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "no-cache, no-store, must-revalidate",
 };
 
 const HTML = `
@@ -238,7 +238,7 @@ Deno.serve(async (req: Request) => {
     .replace('YOUR_SUPABASE_URL', supabaseUrl || '')
     .replace('YOUR_SUPABASE_ANON_KEY', supabaseAnonKey || '');
 
-  return new Response(new Blob([finalHtml], { type: "text/html; charset=utf-8" }), {
+  return new Response(finalHtml, {
     headers: htmlHeaders,
   });
 });

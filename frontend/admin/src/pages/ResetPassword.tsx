@@ -26,7 +26,8 @@ export function ResetPassword() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
-  const defaultRecoveryUrl = import.meta.env.VITE_PASSWORD_RESET_REDIRECT_URL || 'globalagencies://reset-password';
+  const defaultRecoveryUrl = import.meta.env.VITE_PASSWORD_RESET_REDIRECT_URL
+    || 'globalagencies://reset-password';
   const [siteUrl, setSiteUrl] = useState(defaultRecoveryUrl);
   const { showAlert, showConfirm } = useModal();
 
@@ -117,14 +118,14 @@ export function ResetPassword() {
               </div>
               <input
                 type="text"
-                placeholder="globalagencies://reset-password"
+                placeholder={defaultRecoveryUrl}
                 className="w-full pl-14 pr-4 py-3 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-500 transition-all outline-none font-medium text-sm text-gray-600"
                 value={siteUrl}
                 onChange={(e) => setSiteUrl(e.target.value)}
               />
             </div>
             <p className="text-[10px] text-gray-400 font-medium italic pl-1">
-              This URL will be sent in the email. It should open the Electron app's update password page.
+              This URL will be sent in the email. It opens the mobile app's secure password reset screen.
             </p>
           </div>
 

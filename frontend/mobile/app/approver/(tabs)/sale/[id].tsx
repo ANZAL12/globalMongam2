@@ -242,7 +242,7 @@ export default function ApproverSaleDetails() {
             </TouchableOpacity>
           </View>
         </View>
-      )})}
+      )}
 
       <View style={{ height: 40 }} />
     </ScrollView>

@@ -221,7 +221,7 @@ export function SaleDetails() {
       
       // 2. If we have a local session, run getUser() to force a silent token validation & refresh if expired
       if (session) {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { error: userError } = await supabase.auth.getUser();
         if (userError) {
           console.warn('🔔 [Auth] getUser validation failed, attempting manual session refresh:', userError.message);
           
@@ -467,7 +467,7 @@ export function SaleDetails() {
                     Approver Notes
                   </h3>
                   <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-700 italic">
-                    "{sale.approver_notes}"
+                    {sale.approver_notes}
                   </div>
                 </div>
               )}
