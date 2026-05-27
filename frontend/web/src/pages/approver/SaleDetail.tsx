@@ -219,7 +219,7 @@ export default function ApproverSaleDetail() {
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Add notes or feedback about this sale..."
-                            className="w-full bg-gray-50 border-none px-4 py-3 rounded-2xl text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none min-h-[100px] resize-none"
+                            className="w-full bg-gray-50 border-none px-4 py-3 rounded-2xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none min-h-[100px] resize-none"
                         />
                     </div>
                 )}

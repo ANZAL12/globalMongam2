@@ -220,6 +220,7 @@ export default function ApproverSaleDetails() {
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes for admin..."
+            placeholderTextColor="#999"
             multiline={true}
           />
           <View style={styles.buttonRow}>
