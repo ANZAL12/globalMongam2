@@ -148,7 +148,7 @@ export default function ApproverSaleDetails() {
                 },
               ]}
             >
-              {sale.status.replace("_", " ").toUpperCase()}
+              {(sale.status === "approver_approved" ? "approved" : sale.status.replace("_", " ")).toUpperCase()}
             </Text>
           </View>
         </View>

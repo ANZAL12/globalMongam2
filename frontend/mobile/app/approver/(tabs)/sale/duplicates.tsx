@@ -140,7 +140,7 @@ export default function DuplicateSerialSalesScreen() {
                 <Text style={styles.metaText}>Date: {new Date(item.created_at).toLocaleDateString()}</Text>
                 <View style={styles.footerRow}>
                   <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                    {item.status.replace("_", " ").toUpperCase()}
+                    {(item.status === "approver_approved" ? "approved" : item.status.replace("_", " ")).toUpperCase()}
                   </Text>
                   {isCurrentSale ? <Text style={styles.currentSaleText}>Current Sale</Text> : null}
                 </View>

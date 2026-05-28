@@ -127,7 +127,7 @@ export function DuplicateSerialSales() {
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className={`text-xs font-bold uppercase ${getStatusColor(item.status)}`}>
-                      {item.status.replace('_', ' ')}
+                      {item.status === 'approver_approved' ? 'approved' : item.status.replace('_', ' ')}
                     </span>
                     {isCurrentSale ? (
                       <span className="text-[10px] font-bold uppercase text-indigo-600">Current sale</span>

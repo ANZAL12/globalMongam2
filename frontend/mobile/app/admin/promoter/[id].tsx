@@ -152,7 +152,7 @@ export default function PromoterDetailScreen() {
                 </View>
                 <View style={styles.headerRightAction}>
                     <View style={[styles.statusBadge, item.status === 'approved' ? styles.approvedBadge : item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge]}>
-                        <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+                        <Text style={styles.statusText}>{(item.status === "approver_approved" ? "approved" : item.status.replace("_", " ")).toUpperCase()}</Text>
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color="#ccc" />
                 </View>

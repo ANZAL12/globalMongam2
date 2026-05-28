@@ -154,7 +154,7 @@ export default function AllSales() {
                             <View>
                                 <Text style={styles.label}>Status</Text>
                                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                                    {item.status.toUpperCase()}
+                                    {(item.status === "approver_approved" ? "approved" : item.status.replace("_", " ")).toUpperCase()}
                                 </Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>

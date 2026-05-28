@@ -142,7 +142,7 @@ export default function AdminSales() {
                                 <div>
                                     <p className="text-[12px] text-[#888] mb-[2px]">Status</p>
                                     <p className="text-[14px] font-bold uppercase" style={{ color: getStatusColor(item.status) }}>
-                                        {item.status}
+                                        {item.status === 'approver_approved' ? 'approved' : item.status.replace('_', ' ')}
                                     </p>
                                 </div>
                                 <div className="text-right">

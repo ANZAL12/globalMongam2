@@ -199,7 +199,7 @@ export default function SaleDetailScreen() {
                     <View>
                         <Text style={styles.label}>Status</Text>
                         <Text style={[styles.value, { color: sale.status === 'approved' ? '#4caf50' : sale.status === 'rejected' ? '#f44336' : '#ff9800' }]}>
-                            {sale.status.toUpperCase()}
+                            {(sale.status === "approver_approved" ? "approved" : sale.status.replace("_", " ")).toUpperCase()}
                         </Text>
                     </View>
                     <View>

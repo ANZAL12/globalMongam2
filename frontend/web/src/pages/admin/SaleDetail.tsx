@@ -187,7 +187,7 @@ export default function AdminSaleDetail() {
                         <div>
                             <p className="text-[12px] text-[#888] mb-[4px]">Status</p>
                             <p className={`text-[16px] font-[600] uppercase ${sale.status === 'approver_approved' || sale.status === 'paid' ? 'text-[#4caf50]' : sale.status === 'rejected' ? 'text-[#f44336]' : 'text-[#ff9800]'}`}>
-                                {sale.status}
+                                {sale.status === 'approver_approved' ? 'approved' : sale.status.replace('_', ' ')}
                             </p>
                         </div>
                         <div className="text-right">
