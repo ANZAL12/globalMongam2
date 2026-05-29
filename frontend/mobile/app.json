@@ -42,6 +42,14 @@
       "expo-router",
       "expo-notifications",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "jvmArgs": "-Xmx3G -XX:MaxMetaspaceSize=512m"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/GLOBAL1.png",
