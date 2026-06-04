@@ -6,14 +6,21 @@ let lastCleanupAt = 0;
 
 export async function cleanupOldLogs(force = false) {
   const now = Date.now();
-  // Run cleanup at most once every 7 days per browser session, unless forced.
-  if (!force && now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+  
+  if (force) {
+    // If forced (manual cleanup), delete ALL logs
+    const { error } = await supabase.from('system_logs').delete().neq('action', 'SOME_DUMMY_VALUE_TO_DELETE_ALL');
+    if (error) throw error;
+    return;
+  }
+
+  // Run automatic cleanup at most once every 7 days per browser session
+  if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
   lastCleanupAt = now;
 
   const cutoff = new Date(now - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await supabase.from('system_logs').delete().lt('created_at', cutoff);
   if (error) {
-    // Keep login flow resilient even if cleanup policy is restricted.
     console.warn('Failed to cleanup old system logs:', error.message);
   }
 }

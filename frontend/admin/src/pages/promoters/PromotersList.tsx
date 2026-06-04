@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Promoter } from '../../types';
+import { Pagination } from '../../components/Pagination';
 import {
   UserPlus,
   Search,
@@ -19,6 +20,8 @@ export function PromotersList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
 
   useEffect(() => {
     async function fetchPromoters() {
@@ -55,6 +58,13 @@ export function PromotersList() {
     (p as any).shop_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredPromoters.length / rowsPerPage);
+  const currentData = filteredPromoters.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -64,8 +74,8 @@ export function PromotersList() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-7xl mx-auto h-full flex flex-col w-full space-y-6 min-h-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Promoters</h1>
           <p className="mt-1 text-sm text-gray-500">Manage all registered promoters and their accounts.</p>
@@ -92,8 +102,8 @@ export function PromotersList() {
         </div>
       </div>
 
-      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-0">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
           <div className="relative max-w-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" aria-hidden="true" />
@@ -108,9 +118,9 @@ export function PromotersList() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-y-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white">
+            <thead className="bg-white sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Promoter</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
@@ -123,7 +133,7 @@ export function PromotersList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {filteredPromoters.map((promoter) => (
+              {currentData.map((promoter) => (
                 <tr 
                   key={promoter.id} 
                   className="hover:bg-gray-50 transition-colors cursor-pointer group"
@@ -196,6 +206,16 @@ export function PromotersList() {
             </tbody>
           </table>
         </div>
+        
+        {filteredPromoters.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredPromoters.length}
+            itemsPerPage={rowsPerPage}
+          />
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Pagination } from '../../components/Pagination';
 import { supabase } from '../../lib/supabase';
 import {
   UserPlus,
@@ -17,6 +18,8 @@ export function ApproversList() {
   const [approvers, setApprovers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
 
   useEffect(() => {
     async function fetchApprovers() {
@@ -44,6 +47,13 @@ export function ApproversList() {
     a.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredApprovers.length / rowsPerPage);
+  const currentData = filteredApprovers.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -53,8 +63,8 @@ export function ApproversList() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-7xl mx-auto h-full flex flex-col w-full space-y-6 min-h-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Approvers</h1>
           <p className="mt-1 text-sm text-gray-500">Manage all approver accounts and their details.</p>
@@ -68,8 +78,8 @@ export function ApproversList() {
         </Link>
       </div>
 
-      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-0">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
           <div className="relative max-w-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" aria-hidden="true" />
@@ -84,9 +94,9 @@ export function ApproversList() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-y-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white">
+            <thead className="bg-white sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Approver</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
@@ -98,7 +108,7 @@ export function ApproversList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {filteredApprovers.map((approver) => (
+              {currentData.map((approver) => (
                 <tr 
                   key={approver.id} 
                   className="hover:bg-gray-50 transition-colors cursor-pointer group"
@@ -165,6 +175,16 @@ export function ApproversList() {
             </tbody>
           </table>
         </div>
+        
+        {filteredApprovers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredApprovers.length}
+            itemsPerPage={rowsPerPage}
+          />
+        )}
       </div>
     </div>
   );

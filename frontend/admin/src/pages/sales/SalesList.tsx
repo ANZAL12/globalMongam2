@@ -13,6 +13,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Pagination } from '../../components/Pagination';
 
 type SalesListItem = Omit<Sale, 'status'> & {
   status: Sale['status'] | 'approver_approved';
@@ -26,6 +27,8 @@ export function SalesList() {
   const [sales, setSales] = useState<SalesListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
   
   const initialStatus = searchParams.get('status') || 'all';
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
@@ -50,7 +53,12 @@ export function SalesList() {
       searchParams.set('status', newStatus);
     }
     setSearchParams(searchParams, { replace: true });
+    setCurrentPage(1);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     async function fetchSales() {
@@ -143,6 +151,9 @@ export function SalesList() {
     return sale.status.replace('_', ' ');
   };
 
+  const totalPages = Math.ceil(filteredSales.length / rowsPerPage);
+  const currentData = filteredSales.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -152,8 +163,8 @@ export function SalesList() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center space-x-3">
+    <div className="max-w-7xl mx-auto h-full flex flex-col w-full space-y-6 min-h-0">
+      <div className="flex items-center space-x-3 shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-gray-600 hover:text-gray-900 shadow-sm flex items-center justify-center"
@@ -167,8 +178,8 @@ export function SalesList() {
         </div>
       </div>
 
-      <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden">
-        <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50 flex flex-col md:flex-row md:items-center gap-4">
+      <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden flex-1 flex flex-col min-h-0">
+        <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50 flex flex-col md:flex-row md:items-center gap-4 shrink-0">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -196,7 +207,7 @@ export function SalesList() {
           </div>
         </div>
 
-        <div className="px-8 py-5 border-b border-gray-50 bg-white">
+        <div className="px-8 py-5 border-b border-gray-50 bg-white shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               onClick={() => {
@@ -249,10 +260,10 @@ export function SalesList() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-y-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr className="bg-white">
+            <thead className="sticky top-0 z-10 bg-white shadow-sm">
+              <tr>
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Product & Bill</th>
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Promoter</th>
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Amount</th>
@@ -261,7 +272,7 @@ export function SalesList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">
-              {filteredSales.map((sale) => (
+              {currentData.map((sale) => (
                 <tr 
                   key={sale.id} 
                   className="hover:bg-gray-50 transition-colors cursor-pointer group"
@@ -338,6 +349,16 @@ export function SalesList() {
             </tbody>
           </table>
         </div>
+        
+        {filteredSales.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredSales.length}
+            itemsPerPage={rowsPerPage}
+          />
+        )}
       </div>
     </div>
   );

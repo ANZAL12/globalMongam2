@@ -55,32 +55,31 @@ export function PromoterManage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Manage Promoters</h1>
           <p className="mt-1 text-sm text-gray-500">View and edit promoter profiles.</p>
         </div>
-        <Link
-          to="/promoters/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95"
-        >
-          <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-          Add Promoter
-        </Link>
-      </div>
-
-      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden p-6 mb-8">
-        <div className="relative max-w-xl">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-72">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" aria-hidden="true" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm transition-all shadow-sm"
+              placeholder="Search promoters..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
-            placeholder="Search promoters by name, email or place..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Link
+            to="/promoters/new"
+            className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2.5 border border-transparent shadow-sm text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95 shrink-0"
+          >
+            <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            Add Promoter
+          </Link>
         </div>
       </div>
 
@@ -91,29 +90,29 @@ export function PromoterManage() {
             className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col group cursor-pointer"
             onClick={() => navigate(`/promoters/${promoter.id}/edit`)}
           >
-            <div className="p-6 flex-1 relative">
-              <div className="absolute top-6 right-6">
-                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    (promoter as any).is_active !== false 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : 'bg-rose-100 text-rose-800'
-                  }`}>
-                    {(promoter as any).is_active !== false ? 'Active' : 'Inactive'}
-                  </span>
-              </div>
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  {promoter.full_name?.charAt(0) || promoter.email.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">
-                    {promoter.full_name || 'No Name'}
-                  </h3>
-                  <div className="text-xs text-gray-500 font-medium mt-1 flex items-center">
-                    <Building2 className="h-3 w-3 mr-1" />
-                    {promoter.shop_name || 'No Place Assigned'}
+            <div className="p-6 flex-1">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4 min-w-0 pr-4">
+                  <div className="h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xl shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    {promoter.full_name?.charAt(0) || promoter.email.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors truncate">
+                      {promoter.full_name || 'No Name'}
+                    </h3>
+                    <div className="text-xs text-gray-500 font-medium mt-1 flex items-center truncate">
+                      <Building2 className="h-3 w-3 mr-1 shrink-0" />
+                      <span className="truncate">{promoter.shop_name || 'No Place Assigned'}</span>
+                    </div>
                   </div>
                 </div>
+                <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  (promoter as any).is_active !== false 
+                    ? 'bg-emerald-100 text-emerald-800' 
+                    : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {(promoter as any).is_active !== false ? 'Active' : 'Inactive'}
+                </span>
               </div>
 
               <div className="space-y-3 mt-6">
