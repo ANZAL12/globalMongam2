@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.reset_forgotten_password(p_email TEXT, p_new_p
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_user_id UUID;

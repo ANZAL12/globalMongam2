@@ -300,8 +300,8 @@ export function SaleDetails() {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-bold text-gray-900">Sale record not found</h2>
-        <button onClick={() => navigate('/sales')} className="mt-4 text-indigo-600 font-medium hover:underline flex items-center justify-center mx-auto">
-          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to sales List
+        <button onClick={() => navigate(-1)} className="mt-4 text-indigo-600 font-medium hover:underline flex items-center justify-center mx-auto">
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
         </button>
       </div>
     );
@@ -311,7 +311,7 @@ export function SaleDetails() {
     <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex items-center space-x-4">
         <button
-          onClick={() => navigate('/sales')}
+          onClick={() => navigate(-1)}
           className="p-2.5 rounded-2xl bg-white border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all hover:shadow-sm"
         >
           <ArrowLeft className="h-5 w-5" />

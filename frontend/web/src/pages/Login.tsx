@@ -26,8 +26,10 @@ export default function Login() {
 
     // Forgot password states
     const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState<1 | 2>(1);
     const [forgotEmail, setForgotEmail] = useState('');
     const [forgotNewPassword, setForgotNewPassword] = useState('');
+    const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
     const [forgotLoading, setForgotLoading] = useState(false);
     const [forgotError, setForgotError] = useState<string | null>(null);
     const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
@@ -35,6 +37,16 @@ export default function Login() {
     // Password visibility states
     const [showPassword, setShowPassword] = useState(false);
     const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+
+    const openForgotModal = () => {
+        setShowForgotModal(true);
+        setForgotStep(1);
+        setForgotEmail('');
+        setForgotNewPassword('');
+        setForgotConfirmPassword('');
+        setForgotError(null);
+        setForgotSuccess(null);
+    };
 
     const navigate = useNavigate();
 
@@ -229,8 +241,48 @@ export default function Login() {
         setError('Google Login Failed');
     };
 
+    const handleCheckEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setForgotLoading(true);
+        setForgotError(null);
+
+        try {
+            const { data, error: rpcError } = await supabase.rpc('check_must_change_password', {
+                p_email: forgotEmail,
+            });
+
+            if (rpcError) throw rpcError;
+
+            if (data === true) {
+                setForgotStep(2);
+            } else {
+                setForgotError('Please contact the admin to reset your password.');
+            }
+        } catch (err: any) {
+            setForgotError(err.message || 'An error occurred.');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!forgotNewPassword.trim() || !forgotConfirmPassword.trim()) {
+            setForgotError('Please fill out both password fields.');
+            return;
+        }
+
+        if (forgotNewPassword !== forgotConfirmPassword) {
+            setForgotError('Passwords do not match.');
+            return;
+        }
+
+        if (forgotNewPassword.length < 8) {
+            setForgotError('Password must be at least 8 characters long.');
+            return;
+        }
+
         setForgotLoading(true);
         setForgotError(null);
         setForgotSuccess(null);
@@ -244,8 +296,8 @@ export default function Login() {
             if (rpcError) throw rpcError;
 
             setForgotSuccess('Password updated successfully. You can now login.');
-            setForgotEmail('');
             setForgotNewPassword('');
+            setForgotConfirmPassword('');
         } catch (err: any) {
             setForgotError(err.message || 'An error occurred while resetting the password.');
         } finally {
@@ -304,7 +356,7 @@ export default function Login() {
                         <div className="flex justify-end mt-2">
                             <button
                                 type="button"
-                                onClick={() => setShowForgotModal(true)}
+                                onClick={openForgotModal}
                                 className="text-sm font-medium text-[#1976d2] hover:underline"
                             >
                                 Forgot Password?
@@ -405,7 +457,7 @@ export default function Login() {
                             If your account requires a password change, you can set it here.
                         </p>
                         
-                        <form onSubmit={handleForgotPassword}>
+                        <form onSubmit={forgotStep === 1 ? handleCheckEmail : handleForgotPassword}>
                             {forgotError && (
                                 <div className="bg-[#ffebee] text-[#c62828] p-2 sm:p-3 rounded-[10px] text-xs sm:text-sm mb-4 text-center font-medium">
                                     {forgotError}
@@ -424,36 +476,61 @@ export default function Login() {
                                     required
                                     value={forgotEmail}
                                     onChange={(e) => setForgotEmail(e.target.value)}
-                                    className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2]"
+                                    disabled={forgotStep === 2}
+                                    className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2] disabled:opacity-60"
                                     placeholder="email@example.com"
                                 />
                             </div>
-                            <div className="mb-6">
-                                <label className="block text-[14px] font-[600] text-[#444] mb-2">New Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showForgotNewPassword ? "text" : "password"}
-                                        required
-                                        value={forgotNewPassword}
-                                        onChange={(e) => setForgotNewPassword(e.target.value)}
-                                        className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2] pr-12"
-                                        placeholder="Min. 8 characters"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showForgotNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                    </button>
-                                </div>
-                            </div>
+                            {forgotStep === 2 && (
+                                <>
+                                    <div className="mb-4">
+                                        <label className="block text-[14px] font-[600] text-[#444] mb-2">New Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showForgotNewPassword ? "text" : "password"}
+                                                required
+                                                value={forgotNewPassword}
+                                                onChange={(e) => setForgotNewPassword(e.target.value)}
+                                                className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2] pr-12"
+                                                placeholder="Min. 8 characters"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            >
+                                                {showForgotNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-[14px] font-[600] text-[#444] mb-2">Confirm Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showForgotNewPassword ? "text" : "password"}
+                                                required
+                                                value={forgotConfirmPassword}
+                                                onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                                                className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2] pr-12"
+                                                placeholder="Confirm new password"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            >
+                                                {showForgotNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                             <button
                                 type="submit"
                                 disabled={forgotLoading || !!forgotSuccess}
                                 className={`w-full bg-[#1976d2] rounded-[10px] p-[12px] text-white font-bold ${(forgotLoading || !!forgotSuccess) ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
-                                {forgotLoading ? 'Updating...' : 'Update Password'}
+                                {forgotLoading ? (forgotStep === 1 ? 'Checking...' : 'Updating...') : (forgotStep === 1 ? 'Next' : 'Update Password')}
                             </button>
                         </form>
                     </div>

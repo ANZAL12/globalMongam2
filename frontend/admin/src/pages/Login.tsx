@@ -1,4 +1,5 @@
 import logo from '../assets/logo.png';
+import bgImage from '../assets/login-bg.png';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -34,18 +35,21 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <img src={logo} alt="Global Agencies" className="h-40 w-auto" />
+    <div 
+      className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-cover bg-center bg-no-repeat bg-white relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center -mb-16">
+          <img src={logo} alt="Global Agencies" className="h-auto w-72 md:w-96 drop-shadow-xl relative z-10" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="text-center text-3xl font-extrabold text-gray-900 drop-shadow-sm relative z-20">
           Admin Dashboard
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="relative z-10 mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white/20 backdrop-blur-md py-8 px-4 shadow-xl sm:rounded-2xl border border-white/60 sm:px-10">
           <form className="space-y-6" onSubmit={handleLogin}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">

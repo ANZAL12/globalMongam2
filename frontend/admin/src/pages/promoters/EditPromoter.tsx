@@ -125,7 +125,7 @@ export function EditPromoter() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="w-full mx-auto space-y-8">
       <div className="flex items-center space-x-4">
         <button
           onClick={() => navigate('/promoters/manage')}

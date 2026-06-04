@@ -16,12 +16,29 @@ export default function Login() {
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
+    // Forced Password Change States
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [pendingLoginTokens, setPendingLoginTokens] = useState<{access: string, refresh: string, role: string} | null>(null);
+    const [changeNewPassword, setChangeNewPassword] = useState("");
+    const [changeConfirmPassword, setChangeConfirmPassword] = useState("");
+    const [isChangeLoading, setIsChangeLoading] = useState(false);
+
     // Forgot password states
     const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState<1 | 2>(1);
     const [forgotEmail, setForgotEmail] = useState("");
     const [newPassword, setNewPassword] = useState("");
+    const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
     const [forgotLoading, setForgotLoading] = useState(false);
     const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+
+    const openForgotModal = () => {
+        setShowForgotModal(true);
+        setForgotStep(1);
+        setForgotEmail("");
+        setNewPassword("");
+        setForgotConfirmPassword("");
+    };
 
     const handlePasswordLogin = async () => {
         if (!email.trim() || !password.trim()) {
@@ -60,8 +77,17 @@ export default function Login() {
                 throw new Error('Access denied. Only registered admins, promoters, and approvers can sign in.');
             }
 
-            await login(data.session.access_token, data.session.refresh_token, userData.role, userData.must_change_password);
-            syncPushTokenToBackend();
+            if (userData.must_change_password) {
+                setPendingLoginTokens({ 
+                    access: data.session.access_token, 
+                    refresh: data.session.refresh_token, 
+                    role: userData.role 
+                });
+                setShowChangePasswordModal(true);
+            } else {
+                await login(data.session.access_token, data.session.refresh_token, userData.role, false);
+                syncPushTokenToBackend();
+            }
         } catch (error: any) {
             const msg = error.message || "Invalid email or password.";
             Alert.alert(msg === "Invalid login credentials" ? "Login Failed" : "Error", msg);
@@ -70,9 +96,81 @@ export default function Login() {
         }
     };
 
+    const handleChangePassword = async () => {
+        if (!pendingLoginTokens) return;
+        if (!changeNewPassword || !changeConfirmPassword) {
+            Alert.alert("Error", "Please fill out both password fields.");
+            return;
+        }
+        if (changeNewPassword !== changeConfirmPassword) {
+            Alert.alert("Error", "Passwords do not match.");
+            return;
+        }
+        if (changeNewPassword.length < 8) {
+            Alert.alert("Error", "Password must be at least 8 characters long.");
+            return;
+        }
+
+        setIsChangeLoading(true);
+        try {
+            const { error: authError } = await supabase.auth.updateUser({ password: changeNewPassword });
+            if (authError) throw authError;
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('users').update({ must_change_password: false }).eq('id', user.id);
+            }
+
+            setShowChangePasswordModal(false);
+            Alert.alert("Success", "Password updated successfully. Logging you in...");
+            await login(pendingLoginTokens.access, pendingLoginTokens.refresh, pendingLoginTokens.role, false);
+            syncPushTokenToBackend();
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Failed to update password.");
+        } finally {
+            setIsChangeLoading(false);
+        }
+    };
+
+    const handleCheckEmail = async () => {
+        if (!forgotEmail.trim()) {
+            Alert.alert("Error", "Please enter your email.");
+            return;
+        }
+
+        setForgotLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('check_must_change_password', {
+                p_email: forgotEmail.trim(),
+            });
+
+            if (error) throw error;
+
+            if (data === true) {
+                setForgotStep(2);
+            } else {
+                Alert.alert("Notice", "Please contact the admin to reset your password.");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "An error occurred.");
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
     const handleForgotPassword = async () => {
-        if (!forgotEmail.trim() || !newPassword.trim()) {
-            Alert.alert("Error", "Please enter your email and new password.");
+        if (!forgotEmail.trim() || !newPassword.trim() || !forgotConfirmPassword.trim()) {
+            Alert.alert("Error", "Please fill out all fields.");
+            return;
+        }
+
+        if (newPassword !== forgotConfirmPassword) {
+            Alert.alert("Error", "Passwords do not match.");
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            Alert.alert("Error", "Password must be at least 8 characters long.");
             return;
         }
 
@@ -87,8 +185,8 @@ export default function Login() {
 
             Alert.alert("Success", "Password updated successfully. You can now login.");
             setShowForgotModal(false);
-            setForgotEmail("");
             setNewPassword("");
+            setForgotConfirmPassword("");
         } catch (error: any) {
             Alert.alert("Reset Failed", error.message || "An error occurred.");
         } finally {
@@ -130,7 +228,7 @@ export default function Login() {
                             <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#999" />
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => setShowForgotModal(true)}>
+                    <TouchableOpacity onPress={openForgotModal}>
                         <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                     </TouchableOpacity>
                 </View>
@@ -176,32 +274,53 @@ export default function Login() {
                         <View style={styles.inputContainer}>
                             <Text style={styles.label}>Email Address</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, forgotStep === 2 && styles.disabledButton]}
                                 placeholder="email@example.com"
                                 placeholderTextColor="#999"
                                 value={forgotEmail}
                                 onChangeText={setForgotEmail}
                                 autoCapitalize="none"
                                 keyboardType="email-address"
+                                editable={forgotStep === 1}
                             />
                         </View>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>New Password</Text>
-                            <View style={styles.passwordInputContainer}>
-                                <TextInput
-                                    style={styles.passwordInput}
-                                    placeholder="Enter new password"
-                                    placeholderTextColor="#999"
-                                    value={newPassword}
-                                    onChangeText={setNewPassword}
-                                    secureTextEntry={!showForgotNewPassword}
-                                />
-                                <TouchableOpacity onPress={() => setShowForgotNewPassword(!showForgotNewPassword)} style={styles.eyeIcon}>
-                                    <Ionicons name={showForgotNewPassword ? "eye-off" : "eye"} size={20} color="#999" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        {forgotStep === 2 && (
+                            <>
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>New Password</Text>
+                                    <View style={styles.passwordInputContainer}>
+                                        <TextInput
+                                            style={styles.passwordInput}
+                                            placeholder="Enter new password"
+                                            placeholderTextColor="#999"
+                                            value={newPassword}
+                                            onChangeText={setNewPassword}
+                                            secureTextEntry={!showForgotNewPassword}
+                                        />
+                                        <TouchableOpacity onPress={() => setShowForgotNewPassword(!showForgotNewPassword)} style={styles.eyeIcon}>
+                                            <Ionicons name={showForgotNewPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Confirm Password</Text>
+                                    <View style={styles.passwordInputContainer}>
+                                        <TextInput
+                                            style={styles.passwordInput}
+                                            placeholder="Confirm new password"
+                                            placeholderTextColor="#999"
+                                            value={forgotConfirmPassword}
+                                            onChangeText={setForgotConfirmPassword}
+                                            secureTextEntry={!showForgotNewPassword}
+                                        />
+                                        <TouchableOpacity onPress={() => setShowForgotNewPassword(!showForgotNewPassword)} style={styles.eyeIcon}>
+                                            <Ionicons name={showForgotNewPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </>
+                        )}
 
                         <View style={styles.modalButtons}>
                             <TouchableOpacity 
@@ -213,16 +332,76 @@ export default function Login() {
                             
                             <TouchableOpacity 
                                 style={[styles.modalButton, styles.loginButton, forgotLoading && styles.disabledButton]}
-                                onPress={handleForgotPassword}
+                                onPress={forgotStep === 1 ? handleCheckEmail : handleForgotPassword}
                                 disabled={forgotLoading}
                             >
                                 {forgotLoading ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.loginButtonText}>Update</Text>
+                                    <Text style={styles.loginButtonText}>{forgotStep === 1 ? 'Next' : 'Update'}</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Change Password Modal (Forced on login) */}
+            <Modal
+                visible={showChangePasswordModal}
+                transparent
+                animationType="slide"
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.title}>Change Password Required</Text>
+                        <Text style={styles.subtitle}>For security, update your temporary password before continuing.</Text>
+                        
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>New Password</Text>
+                            <View style={styles.passwordInputContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="Min. 8 characters"
+                                    placeholderTextColor="#999"
+                                    value={changeNewPassword}
+                                    onChangeText={setChangeNewPassword}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Confirm Password</Text>
+                            <View style={styles.passwordInputContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="Repeat new password"
+                                    placeholderTextColor="#999"
+                                    value={changeConfirmPassword}
+                                    onChangeText={setChangeConfirmPassword}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity 
+                            style={[styles.loginButton, isChangeLoading && styles.disabledButton]}
+                            onPress={handleChangePassword}
+                            disabled={isChangeLoading}
+                        >
+                            {isChangeLoading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.loginButtonText}>Update Password</Text>
+                            )}
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>

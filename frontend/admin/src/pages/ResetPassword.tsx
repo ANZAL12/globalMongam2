@@ -26,7 +26,10 @@ export function ResetPassword() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
-  const { showAlert, showConfirm } = useModal();
+  const [confirmingUser, setConfirmingUser] = useState<UserProfile | null>(null);
+  const [confirmEmailInput, setConfirmEmailInput] = useState('');
+  const [confirmError, setConfirmError] = useState('');
+  const { showAlert } = useModal();
 
   useEffect(() => {
     fetchUsers();
@@ -50,36 +53,44 @@ export function ResetPassword() {
     }
   };
 
-  const handleResetPassword = async (user: UserProfile) => {
-    const confirmed = await showConfirm({
-      title: 'Trigger Account Recovery?',
-      message: `Trigger account recovery for ${user.email}? This will require the user to set a new password on their next login.`,
-      severity: 'warning'
-    });
+  const handleResetPassword = (user: UserProfile) => {
+    setConfirmingUser(user);
+    setConfirmEmailInput('');
+    setConfirmError('');
+  };
 
-    if (!confirmed) return;
+  const processRecovery = async () => {
+    if (!confirmingUser) return;
+    
+    if (confirmEmailInput !== confirmingUser.email) {
+      setConfirmError('The email entered does not match.');
+      return;
+    }
 
-    setProcessing(user.id);
+    const userToProcess = confirmingUser;
+    setConfirmingUser(null);
+    setProcessing(userToProcess.id);
+
     try {
       const { error: updateError } = await supabase
         .from('users')
         .update({ must_change_password: true })
-        .eq('id', user.id);
+        .eq('id', userToProcess.id);
 
       if (updateError) throw updateError;
 
-      await logActivity('Account Recovery', `Admin triggered account recovery for ${user.role}: ${user.email}`);
+      await logActivity('Account Recovery', `Admin triggered account recovery for ${userToProcess.role}: ${userToProcess.email}`);
 
       showAlert({
         title: 'Recovery Triggered',
-        message: `Account recovery has been initiated for ${user.email}.`,
+        message: `Account recovery has been initiated for ${userToProcess.email}.`,
         severity: 'success'
       });
     } catch (err: any) {
       console.error('Error resetting password:', err);
       showAlert({
         title: 'Reset Failed',
-        message: err.message || 'Failed to send reset email.',
+        message: err.message || 'Failed to trigger account recovery.',
         severity: 'error'
       });
     } finally {
@@ -93,7 +104,7 @@ export function ResetPassword() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-6 pb-12">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Account Recovery</h1>
@@ -186,6 +197,60 @@ export function ResetPassword() {
         </div>
       </div>
 
+      {/* Confirmation Modal */}
+      {confirmingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-xl">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="h-12 w-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">Confirm Recovery</h3>
+                <p className="text-sm text-gray-500 font-medium">This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-6 font-medium">
+              You are about to trigger account recovery for <span className="font-bold text-gray-900">{confirmingUser.full_name || confirmingUser.email}</span>. This will require them to set a new password on their next login.
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pl-1">
+                To continue, enter the email <span className="text-indigo-600">{confirmingUser.email}</span> below:
+              </label>
+              <input
+                type="email"
+                value={confirmEmailInput}
+                onChange={(e) => {
+                  setConfirmEmailInput(e.target.value);
+                  setConfirmError('');
+                }}
+                className={`w-full px-4 py-3 rounded-xl bg-gray-50 border focus:bg-white transition-all outline-none text-sm font-medium ${
+                  confirmError ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' : 'border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                }`}
+                placeholder="user@example.com"
+              />
+              {confirmError && <p className="mt-2 text-xs text-rose-500 font-bold ml-1">{confirmError}</p>}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setConfirmingUser(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={processRecovery}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all shadow-md shadow-rose-500/20"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

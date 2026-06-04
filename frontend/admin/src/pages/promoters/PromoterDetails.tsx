@@ -136,7 +136,7 @@ export function PromoterDetails() {
     .reduce((sum, s) => sum + parseFloat(s.incentive_amount || '0'), 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+    <div className="w-full mx-auto space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center space-x-4">
           <button
@@ -259,7 +259,7 @@ export function PromoterDetails() {
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{sales.length} Total Sales</span>
             </div>
             
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
               {sales.map((sale) => (
                 <div 
                   key={sale.id} 

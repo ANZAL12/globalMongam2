@@ -225,7 +225,7 @@ export function ApproverDetails() {
 
   if (error || !approver) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full mx-auto">
         <button
           onClick={() => navigate('/approvers')}
           className="mb-4 inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500"
@@ -241,7 +241,7 @@ export function ApproverDetails() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/approvers')}
@@ -374,7 +374,8 @@ export function ApproverDetails() {
                 <div className="col-span-3">Shop</div>
                 <div className="col-span-1 text-right">Status</div>
               </div>
-              {promoters.map((promoter) => (
+              <div className="max-h-[500px] overflow-y-auto">
+                {promoters.map((promoter) => (
                 <button
                   key={promoter.id}
                   onClick={() => navigate(`/promoters/${promoter.id}`)}
@@ -394,7 +395,8 @@ export function ApproverDetails() {
                     </span>
                   </div>
                 </button>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>

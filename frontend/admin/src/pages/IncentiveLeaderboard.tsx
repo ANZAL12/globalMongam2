@@ -132,7 +132,7 @@ export function IncentiveLeaderboard() {
   const others = filteredData.slice(3);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-5 pb-12">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center">
