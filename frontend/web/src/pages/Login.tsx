@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { GoogleLogin } from '@react-oauth/google';
 import { syncWebPushToken } from '../services/firebaseMessaging';
+import { Eye, EyeOff } from 'lucide-react';
 
 type PendingLogin = {
     accessToken: string;
@@ -22,6 +23,19 @@ export default function Login() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
     const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
+
+    // Forgot password states
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotNewPassword, setForgotNewPassword] = useState('');
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [forgotError, setForgotError] = useState<string | null>(null);
+    const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+
+    // Password visibility states
+    const [showPassword, setShowPassword] = useState(false);
+    const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -215,6 +229,30 @@ export default function Login() {
         setError('Google Login Failed');
     };
 
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setForgotLoading(true);
+        setForgotError(null);
+        setForgotSuccess(null);
+
+        try {
+            const { error: rpcError } = await supabase.rpc('reset_forgotten_password', {
+                p_email: forgotEmail,
+                p_new_password: forgotNewPassword,
+            });
+
+            if (rpcError) throw rpcError;
+
+            setForgotSuccess('Password updated successfully. You can now login.');
+            setForgotEmail('');
+            setForgotNewPassword('');
+        } catch (err: any) {
+            setForgotError(err.message || 'An error occurred while resetting the password.');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen h-[100dvh] flex items-center justify-center bg-[#f0f2f5] p-4 sm:p-5">
             <div className="w-full max-w-md bg-white rounded-[15px] p-5 sm:p-[25px] shadow-[0_2px_10px_rgba(0,0,0,0.1)] flex flex-col justify-center max-h-full">
@@ -247,13 +285,31 @@ export default function Login() {
 
                     <div className="mb-3 sm:mb-[20px] shrink-0">
                         <label className="block text-xs sm:text-[14px] font-[600] text-[#444] mb-1 sm:mb-[8px]">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-3 sm:p-[15px] text-sm sm:text-[16px] outline-none focus:border-[#1976d2]"
-                            placeholder="********"
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-3 sm:p-[15px] text-sm sm:text-[16px] outline-none focus:border-[#1976d2] pr-12"
+                                placeholder="********"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                        <div className="flex justify-end mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowForgotModal(true)}
+                                className="text-sm font-medium text-[#1976d2] hover:underline"
+                            >
+                                Forgot Password?
+                            </button>
+                        </div>
                     </div>
 
                     <button
@@ -330,6 +386,76 @@ export default function Login() {
                         >
                             {passwordUpdateLoading ? 'Updating...' : 'Update Password'}
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {showForgotModal && (
+                <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl relative">
+                        <button
+                            type="button"
+                            onClick={() => { setShowForgotModal(false); setForgotSuccess(null); setForgotError(null); }}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+                        >
+                            ✕
+                        </button>
+                        <h2 className="text-xl font-bold text-[#1a1a1a] mb-2">Forgot Password</h2>
+                        <p className="text-sm text-[#666] mb-5">
+                            If your account requires a password change, you can set it here.
+                        </p>
+                        
+                        <form onSubmit={handleForgotPassword}>
+                            {forgotError && (
+                                <div className="bg-[#ffebee] text-[#c62828] p-2 sm:p-3 rounded-[10px] text-xs sm:text-sm mb-4 text-center font-medium">
+                                    {forgotError}
+                                </div>
+                            )}
+                            {forgotSuccess && (
+                                <div className="bg-green-50 text-green-700 p-2 sm:p-3 rounded-[10px] text-xs sm:text-sm mb-4 text-center font-medium border border-green-200">
+                                    {forgotSuccess}
+                                </div>
+                            )}
+                            
+                            <div className="mb-4">
+                                <label className="block text-[14px] font-[600] text-[#444] mb-2">Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={forgotEmail}
+                                    onChange={(e) => setForgotEmail(e.target.value)}
+                                    className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2]"
+                                    placeholder="email@example.com"
+                                />
+                            </div>
+                            <div className="mb-6">
+                                <label className="block text-[14px] font-[600] text-[#444] mb-2">New Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showForgotNewPassword ? "text" : "password"}
+                                        required
+                                        value={forgotNewPassword}
+                                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                                        className="w-full bg-[#f9f9f9] border border-[#e1e1e1] rounded-[10px] p-[12px] text-[15px] outline-none focus:border-[#1976d2] pr-12"
+                                        placeholder="Min. 8 characters"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showForgotNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={forgotLoading || !!forgotSuccess}
+                                className={`w-full bg-[#1976d2] rounded-[10px] p-[12px] text-white font-bold ${(forgotLoading || !!forgotSuccess) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                                {forgotLoading ? 'Updating...' : 'Update Password'}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}

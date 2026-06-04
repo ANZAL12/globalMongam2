@@ -10,6 +10,15 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip,
+} from 'recharts';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -77,10 +86,10 @@ export function Dashboard() {
     },
     {
       name: 'Total Approved',
-      value: sales.filter(s => s.status === 'approved' || s.status === 'paid').length,
+      value: sales.filter(s => s.status === 'approver_approved' || s.status === 'approved').length,
       icon: CheckCircle,
       color: 'bg-emerald-500',
-      link: '/sales?status=approved'
+      link: '/sales?status=approver_approved'
     },
     {
       name: 'Incentives Paid',
@@ -90,6 +99,17 @@ export function Dashboard() {
       link: '/sales?status=paid'
     },
   ];
+
+  const approvedSales = sales.filter(s => s.status === 'approver_approved' || s.status === 'approved');
+  const trendDataMap = new Map<string, number>();
+  [...approvedSales].reverse().forEach(sale => {
+    const date = new Date(sale.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    trendDataMap.set(date, (trendDataMap.get(date) || 0) + Number(sale.bill_amount || 0));
+  });
+  const trendData = Array.from(trendDataMap.entries()).map(([date, amount]) => ({
+    date,
+    amount
+  }));
 
   if (loading) {
     return (
@@ -126,6 +146,31 @@ export function Dashboard() {
             </dd>
           </Link>
         ))}
+      </div>
+
+      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl p-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Overall Sales Trend</h2>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `₹${val}`} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                itemStyle={{ color: '#111827', fontWeight: 600 }}
+                formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Amount']}
+              />
+              <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">

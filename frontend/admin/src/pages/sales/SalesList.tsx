@@ -9,7 +9,8 @@ import {
   Filter,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  ArrowLeft
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -152,9 +153,18 @@ export function SalesList() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Management</h1>
-        <p className="mt-1 text-sm text-gray-500">Monitor and manage all sales submissions from promoters.</p>
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 -ml-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-gray-600 hover:text-gray-900 shadow-sm flex items-center justify-center"
+          title="Go back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Management</h1>
+          <p className="mt-1 text-sm text-gray-500">Monitor and manage all sales submissions from promoters.</p>
+        </div>
       </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden">

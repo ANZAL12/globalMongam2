@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, Modal } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useGoogleSignIn } from "../context/GoogleSignInProvider";
@@ -13,6 +14,14 @@ export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Forgot password states
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
 
     const handlePasswordLogin = async () => {
         if (!email.trim() || !password.trim()) {
@@ -61,6 +70,32 @@ export default function Login() {
         }
     };
 
+    const handleForgotPassword = async () => {
+        if (!forgotEmail.trim() || !newPassword.trim()) {
+            Alert.alert("Error", "Please enter your email and new password.");
+            return;
+        }
+
+        setForgotLoading(true);
+        try {
+            const { error } = await supabase.rpc('reset_forgotten_password', {
+                p_email: forgotEmail.trim(),
+                p_new_password: newPassword.trim(),
+            });
+
+            if (error) throw error;
+
+            Alert.alert("Success", "Password updated successfully. You can now login.");
+            setShowForgotModal(false);
+            setForgotEmail("");
+            setNewPassword("");
+        } catch (error: any) {
+            Alert.alert("Reset Failed", error.message || "An error occurred.");
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.card}>
@@ -82,14 +117,22 @@ export default function Login() {
 
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="********"
-                        placeholderTextColor="#999"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                    />
+                    <View style={styles.passwordInputContainer}>
+                        <TextInput
+                            style={styles.passwordInput}
+                            placeholder="********"
+                            placeholderTextColor="#999"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                            <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                        </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={() => setShowForgotModal(true)}>
+                        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -118,6 +161,71 @@ export default function Login() {
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Forgot Password Modal */}
+            <Modal
+                visible={showForgotModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowForgotModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.title}>Reset Password</Text>
+                        
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Email Address</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="email@example.com"
+                                placeholderTextColor="#999"
+                                value={forgotEmail}
+                                onChangeText={setForgotEmail}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>New Password</Text>
+                            <View style={styles.passwordInputContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="Enter new password"
+                                    placeholderTextColor="#999"
+                                    value={newPassword}
+                                    onChangeText={setNewPassword}
+                                    secureTextEntry={!showForgotNewPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowForgotNewPassword(!showForgotNewPassword)} style={styles.eyeIcon}>
+                                    <Ionicons name={showForgotNewPassword ? "eye-off" : "eye"} size={20} color="#999" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setShowForgotModal(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.loginButton, forgotLoading && styles.disabledButton]}
+                                onPress={handleForgotPassword}
+                                disabled={forgotLoading}
+                            >
+                                {forgotLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.loginButtonText}>Update</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -213,5 +321,61 @@ const styles = StyleSheet.create({
         color: "#999",
         fontWeight: "600",
         fontSize: 14,
+    },
+    forgotPasswordText: {
+        color: "#1976d2",
+        fontSize: 14,
+        fontWeight: "600",
+        textAlign: "right",
+        marginTop: 10,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        borderRadius: 15,
+        padding: 25,
+        elevation: 5,
+    },
+    modalButtons: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 10,
+    },
+    modalButton: {
+        flex: 1,
+        marginHorizontal: 5,
+    },
+    cancelButton: {
+        backgroundColor: "#f5f5f5",
+        borderRadius: 10,
+        padding: 15,
+        alignItems: "center",
+    },
+    cancelButtonText: {
+        color: "#666",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    passwordInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 10,
+        backgroundColor: "#f9f9f9",
+    },
+    passwordInput: {
+        flex: 1,
+        padding: 15,
+        fontSize: 16,
+        color: "#333",
+    },
+    eyeIcon: {
+        padding: 15,
     },
 });

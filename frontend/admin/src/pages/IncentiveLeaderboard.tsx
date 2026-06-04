@@ -177,14 +177,19 @@ export function IncentiveLeaderboard() {
             <div 
               key={item.promoter_id}
               className={`relative bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-indigo-100/50 flex flex-col items-center text-center group cursor-pointer hover:-translate-y-2 transition-all duration-300 ${
-                index === 0 ? 'md:order-2 border-amber-100 bg-gradient-to-b from-amber-50/30 to-white' : index === 1 ? 'md:order-1' : 'md:order-3'
+                index === 0 ? 'border-amber-100 bg-gradient-to-b from-amber-50/30 to-white' : ''
               }`}
               onClick={() => navigate(`/promoters/${item.promoter_id}`)}
             >
-              <div className="absolute top-6 right-6">
-                <Medal className={`h-8 w-8 ${
+              <div className="absolute top-6 right-6 flex flex-col items-center">
+                <Medal className={`h-8 w-8 mb-1 ${
                   index === 0 ? 'text-amber-500' : index === 1 ? 'text-gray-400' : 'text-amber-700'
                 }`} />
+                <span className={`text-[10px] font-black uppercase tracking-widest ${
+                  index === 0 ? 'text-amber-600' : index === 1 ? 'text-gray-500' : 'text-amber-800'
+                }`}>
+                  {index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'}
+                </span>
               </div>
               
               <div className={`h-24 w-24 rounded-3xl mb-6 flex items-center justify-center text-3xl font-black shadow-lg ${

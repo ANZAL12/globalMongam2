@@ -158,20 +158,9 @@ export function ApproverDetails() {
 
     setProcessingAction(true);
     try {
-      if (assignedPromotersCount > 0) {
-        const { error: unassignError } = await supabase
-          .from('users')
-          .update({ approver_id: null })
-          .eq('role', 'promoter')
-          .eq('approver_id', approver.id);
-        if (unassignError) throw unassignError;
-      }
-
-      const { error: deleteError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', approver.id)
-        .eq('role', 'approver');
+      const { error: deleteError } = await supabase.rpc('admin_delete_user', {
+        p_user_id: approver.id
+      });
       if (deleteError) throw deleteError;
 
       showAlert({
