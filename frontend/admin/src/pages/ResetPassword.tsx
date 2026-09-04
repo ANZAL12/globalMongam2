@@ -8,7 +8,6 @@ import {
   Mail, 
   User, 
   Shield, 
-  Send, 
   Loader2, 
   AlertCircle 
 } from 'lucide-react';

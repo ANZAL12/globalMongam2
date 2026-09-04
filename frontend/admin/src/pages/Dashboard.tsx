@@ -28,7 +28,10 @@ export function Dashboard() {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      if (!profile) return;
+      if (!profile) {
+        setLoading(false);
+        return;
+      }
       try {
         let query = supabase
           .from('sales')
@@ -165,7 +168,7 @@ export function Dashboard() {
               <Tooltip 
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                 itemStyle={{ color: '#111827', fontWeight: 600 }}
-                formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Amount']}
+                formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Amount']}
               />
               <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
             </AreaChart>

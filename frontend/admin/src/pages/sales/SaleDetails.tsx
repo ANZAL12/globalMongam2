@@ -21,8 +21,11 @@ import {
   Phone,
   Smartphone,
   Copy,
-  QrCode
+  QrCode,
+  FileDown,
+  Loader2
 } from 'lucide-react';
+import { exportSingleSaleToPdf } from '../../utils/salesPdfExport';
 
 export function SaleDetails() {
   const { id } = useParams();
@@ -37,6 +40,27 @@ export function SaleDetails() {
   const [approverName, setApproverName] = useState<string | null>(null);
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!sale) return;
+    try {
+      setExportingPdf(true);
+      await exportSingleSaleToPdf({
+        ...sale,
+        approver_name: approverName,
+      });
+    } catch (err) {
+      console.error('Failed to generate sale voucher PDF:', err);
+      showAlert({
+        title: 'Export Failed',
+        message: 'Could not generate PDF voucher. Please try again.',
+        severity: 'error',
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
   const [approver, setApprover] = useState<{
     id: string;
     email: string | null;
@@ -309,23 +333,39 @@ export function SaleDetails() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-in fade-in duration-500">
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2.5 rounded-2xl bg-white border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all hover:shadow-sm"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-            <span>Sales Dashboard</span>
-            <ChevronRight className="h-3 w-3" />
-            <span>Sale Details</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2.5 rounded-2xl bg-white border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all hover:shadow-sm cursor-pointer"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+              <span>Sales Dashboard</span>
+              <ChevronRight className="h-3 w-3" />
+              <span>Sale Details</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight truncate">
+              {sale.product_name}
+            </h1>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight truncate">
-            {sale.product_name}
-          </h1>
         </div>
+
+        <button
+          onClick={handleDownloadPdf}
+          disabled={exportingPdf}
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+          title="Download official sale docket & voucher as PDF"
+        >
+          {exportingPdf ? (
+            <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
+          ) : (
+            <FileDown className="h-4 w-4 text-rose-600" />
+          )}
+          <span>{exportingPdf ? 'Generating PDF...' : 'Download PDF Voucher'}</span>
+        </button>
       </div>
 
       {error && (

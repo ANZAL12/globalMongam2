@@ -10,10 +10,13 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  FileDown,
+  Loader2
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Pagination } from '../../components/Pagination';
+import { exportAllSalesToPdf } from '../../utils/salesPdfExport';
 
 type SalesListItem = Omit<Sale, 'status'> & {
   status: Sale['status'] | 'approver_approved';
@@ -32,7 +35,23 @@ export function SalesList() {
   
   const initialStatus = searchParams.get('status') || 'all';
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
+
+  const handleExportPdf = async () => {
+    try {
+      setExporting(true);
+      await exportAllSalesToPdf(filteredSales, {
+        filterTitle: statusFilter,
+        searchTerm: searchTerm,
+      });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
   const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
   const getLatestSaleId = (items: any[]) => {
     if (items.length === 0) return '';
@@ -164,18 +183,34 @@ export function SalesList() {
 
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col w-full space-y-6 min-h-0">
-      <div className="flex items-center space-x-3 shrink-0">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 -ml-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-gray-600 hover:text-gray-900 shadow-sm flex items-center justify-center"
-          title="Go back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Management</h1>
-          <p className="mt-1 text-sm text-gray-500">Monitor and manage all sales submissions from promoters.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-gray-600 hover:text-gray-900 shadow-sm flex items-center justify-center cursor-pointer"
+            title="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Management</h1>
+            <p className="mt-1 text-sm text-gray-500">Monitor and manage all sales submissions from promoters.</p>
+          </div>
         </div>
+
+        <button
+          onClick={handleExportPdf}
+          disabled={exporting || filteredSales.length === 0}
+          className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+          title="Download complete sales report with all details as PDF"
+        >
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileDown className="h-4 w-4" />
+          )}
+          <span>{exporting ? 'Generating PDF...' : 'Export Sales PDF'}</span>
+        </button>
       </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden flex-1 flex flex-col min-h-0">

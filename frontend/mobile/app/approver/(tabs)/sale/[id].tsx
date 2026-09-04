@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Keyboard,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { supabase } from "../../../../services/supabase";
@@ -40,6 +42,29 @@ export default function ApproverSaleDetails() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [notes, setNotes] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -113,7 +138,16 @@ export default function ApproverSaleDetails() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        contentContainerStyle={{
+          paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 40,
+        }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
 
       <View style={styles.contentHeader}>
         <Text style={styles.headerTitle}>Sale Details</Text>
@@ -169,12 +203,12 @@ export default function ApproverSaleDetails() {
           <Text style={styles.label}>Serial No</Text>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={styles.value}>{sale.serial_no || "N/A"}</Text>
-            {sale.serial_no && (
+            {sale.serial_no ? (
               <TouchableOpacity
                 onPress={() =>
                   router.push({
                     pathname: "/approver/sale/duplicates",
-                    params: { serial: sale.serial_no, currentSaleId: sale.id },
+                    params: { serial: sale.serial_no!, currentSaleId: sale.id },
                   })
                 }
                 style={styles.duplicateButton}
@@ -182,7 +216,7 @@ export default function ApproverSaleDetails() {
                 <MaterialIcons name="content-copy" size={16} color="#1976d2" />
                 <Text style={styles.duplicateText}>Check Duplicates</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </View>
 
@@ -207,12 +241,14 @@ export default function ApproverSaleDetails() {
         </View>
       </View>
 
-      {sale.bill_image_url && (
+      {sale.bill_image_url ? (
         <View style={styles.imageCard}>
           <Text style={styles.label}>Bill Image</Text>
           <Image source={{ uri: sale.bill_image_url }} style={styles.billImage} resizeMode="contain" />
         </View>
-      )}      {sale.status === "pending" && (
+      ) : null}
+
+      {sale.status === "pending" ? (
         <View style={styles.actionCard}>
           <Text style={[styles.label, { marginBottom: 8 }]}>Notes (Optional)</Text>
           <TextInput
@@ -222,6 +258,11 @@ export default function ApproverSaleDetails() {
             placeholder="Add notes for admin..."
             placeholderTextColor="#999"
             multiline={true}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 150);
+            }}
           />
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -243,10 +284,11 @@ export default function ApproverSaleDetails() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ) : null}
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -336,7 +378,7 @@ const styles = StyleSheet.create({
   },
   billImage: {
     width: "100%",
-    height: 400,
+    height: 300,
     marginTop: 10,
     borderRadius: 8,
     backgroundColor: "#f9f9f9",
