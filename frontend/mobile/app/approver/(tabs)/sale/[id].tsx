@@ -17,6 +17,7 @@ import { supabase } from "../../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../../../context/AuthContext";
 import AppHeader from "../../../../components/AppHeader";
+import ZoomableImageModal from "../../../../components/ZoomableImageModal";
 
 type Sale = {
   id: string;
@@ -43,6 +44,7 @@ export default function ApproverSaleDetails() {
   const [processing, setProcessing] = useState(false);
   const [notes, setNotes] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -243,8 +245,38 @@ export default function ApproverSaleDetails() {
 
       {sale.bill_image_url ? (
         <View style={styles.imageCard}>
-          <Text style={styles.label}>Bill Image</Text>
-          <Image source={{ uri: sale.bill_image_url }} style={styles.billImage} resizeMode="contain" />
+          <View style={styles.imageHeaderRow}>
+            <Text style={styles.label}>Bill Image</Text>
+            <TouchableOpacity
+              style={styles.expandButton}
+              onPress={() => setIsImageModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="zoom-in" size={18} color="#1976d2" />
+              <Text style={styles.expandButtonText}>Zoom & Inspect</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.imageTouchable}
+            activeOpacity={0.85}
+            onPress={() => setIsImageModalVisible(true)}
+          >
+            <Image
+              source={{ uri: sale.bill_image_url }}
+              style={styles.billImage}
+              resizeMode="cover"
+            />
+            <View style={styles.zoomOverlay}>
+              <View style={styles.zoomBadgeOverlay}>
+                <MaterialIcons name="zoom-in" size={20} color="#fff" />
+                <Text style={styles.zoomBadgeOverlayText}>Tap to Zoom Image</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.imageHelpText}>
+            Tap image to zoom in, pan across details, and rotate orientation.
+          </Text>
         </View>
       ) : null}
 
@@ -288,6 +320,15 @@ export default function ApproverSaleDetails() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {sale.bill_image_url ? (
+        <ZoomableImageModal
+          visible={isImageModalVisible}
+          imageUrl={sale.bill_image_url}
+          title={sale.bill_no ? `Bill #${sale.bill_no}` : "Bill Image Review"}
+          onClose={() => setIsImageModalVisible(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -376,12 +417,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     marginVertical: 15,
   },
+  imageHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  expandButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e3f2fd",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: "#1976d2",
+    fontWeight: "700",
+    marginLeft: 4,
+  },
+  imageTouchable: {
+    position: "relative",
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#f5f5f5",
+  },
   billImage: {
     width: "100%",
-    height: 300,
-    marginTop: 10,
-    borderRadius: 8,
+    height: 260,
+    borderRadius: 10,
     backgroundColor: "#f9f9f9",
+  },
+  zoomOverlay: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+  },
+  zoomBadgeOverlay: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  zoomBadgeOverlayText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 6,
+  },
+  imageHelpText: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 8,
+    textAlign: "center",
   },
   buttonRow: {
     flexDirection: "row",
