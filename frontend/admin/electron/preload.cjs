@@ -31,6 +31,10 @@ contextBridge.exposeInMainWorld(
     supabase: {
       createPromoter: (data) => ipcRenderer.invoke('supabase:createPromoter', data),
       createUser: (data) => ipcRenderer.invoke('supabase:createUser', data),
+    },
+    // System utility bridge (open PDF in OS default viewer with full preview)
+    system: {
+      openPdf: (data) => ipcRenderer.invoke('system:openPdf', data),
     }
   }
 );

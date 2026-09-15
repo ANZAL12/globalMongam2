@@ -12,15 +12,31 @@ import {
   Clock,
   ArrowLeft,
   FileDown,
-  Loader2
+  Loader2,
+  Printer,
+  FileText
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Pagination } from '../../components/Pagination';
-import { exportAllSalesToPdf } from '../../utils/salesPdfExport';
+import { PrintPreviewModal } from '../../components/PrintPreviewModal';
+import {
+  exportAllSalesToPdf,
+  generateAllSalesHtml,
+  generateSingleSaleHtml,
+  generateMultiSaleFullPagesHtml,
+  openAllSalesInSystemViewer,
+  openSingleSaleInSystemViewer,
+  exportSingleSaleToPdf,
+  printHtml,
+} from '../../utils/salesPdfExport';
 
 type SalesListItem = Omit<Sale, 'status'> & {
   status: Sale['status'] | 'approver_approved';
+  promoter_name?: string | null;
   promoter_email?: string | null;
+  promoter_phone?: string | null;
+  promoter_gpay?: string | null;
+  promoter_upi?: string | null;
   approver_name?: string | null;
   has_duplicate_serial?: boolean;
 };
@@ -36,6 +52,21 @@ export function SalesList() {
   const initialStatus = searchParams.get('status') || 'all';
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [exporting, setExporting] = useState(false);
+  const [printingReport, setPrintingReport] = useState(false);
+  const [printingSaleId, setPrintingSaleId] = useState<string | null>(null);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    htmlContent: string;
+    onPrint: () => void;
+    onOpenInSystemViewer?: () => Promise<void>;
+    onDownloadPdf?: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    htmlContent: '',
+    onPrint: () => {},
+  });
   const navigate = useNavigate();
 
   const handleExportPdf = async () => {
@@ -50,6 +81,82 @@ export function SalesList() {
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handlePrintReport = async () => {
+    try {
+      setPrintingReport(true);
+      const html = await generateAllSalesHtml(filteredSales, {
+        filterTitle: statusFilter,
+        searchTerm: searchTerm,
+      });
+      setPreviewModal({
+        isOpen: true,
+        title: 'Sales Audit & Disbursement Report Preview',
+        htmlContent: html,
+        onPrint: () => printHtml(html),
+        onOpenInSystemViewer: async () => {
+          await openAllSalesInSystemViewer(filteredSales, {
+            filterTitle: statusFilter,
+            searchTerm: searchTerm,
+          });
+        },
+        onDownloadPdf: async () => {
+          await exportAllSalesToPdf(filteredSales, {
+            filterTitle: statusFilter,
+            searchTerm: searchTerm,
+          });
+        },
+      });
+    } catch (err) {
+      console.error('Failed to prepare print preview:', err);
+      alert('Failed to prepare print preview. Please try again.');
+    } finally {
+      setPrintingReport(false);
+    }
+  };
+
+  const handlePrintFullDetailsPages = async () => {
+    try {
+      setPrintingReport(true);
+      const html = await generateMultiSaleFullPagesHtml(filteredSales as any);
+      setPreviewModal({
+        isOpen: true,
+        title: `Sale Dockets (Full Details) - ${filteredSales.length} Records`,
+        htmlContent: html,
+        onPrint: () => printHtml(html),
+      });
+    } catch (err) {
+      console.error('Failed to prepare full page print preview:', err);
+      alert('Failed to prepare print preview. Please try again.');
+    } finally {
+      setPrintingReport(false);
+    }
+  };
+
+  const handlePrintSingleSale = async (e: React.MouseEvent, sale: SalesListItem) => {
+    e.stopPropagation();
+    try {
+      setPrintingSaleId(sale.id);
+      const html = await generateSingleSaleHtml(sale as any);
+      setPreviewModal({
+        isOpen: true,
+        title: `Sale Voucher Preview - ${sale.bill_no || sale.id.slice(0, 8)}`,
+        htmlContent: html,
+        onPrint: () => printHtml(html),
+        onOpenInSystemViewer: async () => {
+          await openSingleSaleInSystemViewer(sale as any);
+        },
+        onDownloadPdf: async () => {
+          await exportSingleSaleToPdf(sale as any);
+        },
+      });
+    } catch (err) {
+      console.error('Failed to prepare sale voucher preview:', err);
+      alert('Failed to prepare sale voucher preview. Please try again.');
+    } finally {
+      setPrintingSaleId(null);
     }
   };
   const normalizeSerial = (serial: string | null | undefined) => serial?.trim().toLowerCase() || '';
@@ -87,7 +194,11 @@ export function SalesList() {
           .select(`
             *,
             promoter:users!sales_promoter_id_fkey (
-              email
+              full_name,
+              email,
+              phone_number,
+              gpay_number,
+              upi_id
             ),
             approver:users!approved_by (
               full_name,
@@ -109,7 +220,11 @@ export function SalesList() {
 
         const mappedSales = (data || []).map((sale: any) => ({
           ...sale,
+          promoter_name: sale.promoter?.full_name || null,
           promoter_email: sale.promoter?.email || 'Unknown',
+          promoter_phone: sale.promoter?.phone_number || null,
+          promoter_gpay: sale.promoter?.gpay_number || null,
+          promoter_upi: sale.promoter?.upi_id || null,
           approver_name: sale.approver?.full_name || sale.approver?.email || null,
           has_duplicate_serial: (() => {
             const serialKey = normalizeSerial(sale.serial_no);
@@ -198,19 +313,45 @@ export function SalesList() {
           </div>
         </div>
 
-        <button
-          onClick={handleExportPdf}
-          disabled={exporting || filteredSales.length === 0}
-          className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
-          title="Download complete sales report with all details as PDF"
-        >
-          {exporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <FileDown className="h-4 w-4" />
-          )}
-          <span>{exporting ? 'Generating PDF...' : 'Export Sales PDF'}</span>
-        </button>
+        <div className="flex items-center space-x-2.5">
+          <button
+            onClick={handlePrintFullDetailsPages}
+            disabled={printingReport || filteredSales.length === 0}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+            title="Print each sale as a full page of all details (docket format, not table)"
+          >
+            {printingReport ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <FileText className="h-4 w-4 text-white" />
+            )}
+            <span>Print Full Details</span>
+          </button>
+
+          <button
+            onClick={handlePrintReport}
+            disabled={printingReport || filteredSales.length === 0}
+            className="inline-flex items-center justify-center space-x-2 px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+            title="Print summary table report"
+          >
+            <Printer className="h-4 w-4 text-gray-500" />
+            <span>Table Report</span>
+          </button>
+
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting || filteredSales.length === 0}
+            className="inline-flex items-center justify-center space-x-2 px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+            title="Download complete sales report as PDF"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
+            ) : (
+              <FileDown className="h-4 w-4 text-rose-600" />
+            )}
+            <span>Export PDF</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden flex-1 flex flex-col min-h-0">
@@ -304,6 +445,7 @@ export function SalesList() {
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Amount</th>
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
                 <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Date</th>
+                <th className="px-8 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">
@@ -369,11 +511,27 @@ export function SalesList() {
                       {new Date(sale.created_at).toLocaleDateString()}
                     </div>
                   </td>
+                  <td className="px-8 py-5 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => handlePrintSingleSale(e, sale)}
+                      disabled={printingSaleId === sale.id}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-50/70 hover:bg-indigo-100/80 border border-indigo-200 rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Print only that full page of all details for this sale (docket format, not table)"
+                    >
+                      {printingSaleId === sale.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                      )}
+                      <span>Print Full Page</span>
+                    </button>
+                  </td>
                 </tr>
               ))}
               {filteredSales.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
+                  <td colSpan={6} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
                       <ShoppingBag className="h-12 w-12 opacity-10" />
                       <p className="text-sm font-medium">No sales records found.</p>
@@ -395,6 +553,16 @@ export function SalesList() {
           />
         )}
       </div>
+
+      <PrintPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={() => setPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={previewModal.title}
+        htmlContent={previewModal.htmlContent}
+        onPrint={previewModal.onPrint}
+        onOpenInSystemViewer={previewModal.onOpenInSystemViewer}
+        onDownloadPdf={previewModal.onDownloadPdf}
+      />
     </div>
   );
 }

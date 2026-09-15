@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Button, Alert, TextInput, Modal, TouchableOpacity, Clipboard } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "../../../services/supabase";
 
@@ -36,12 +36,8 @@ export default function SaleDetailScreen() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isImageModalVisible, setIsImageModalVisible] = useState(false);
 
-    useEffect(() => {
-        fetchSaleDetails();
-    }, [id]);
-
-    const fetchSaleDetails = async () => {
-        setLoading(true);
+    const fetchSaleDetails = useCallback(async () => {
+        if (!id) return;
         try {
             const { data, error } = await supabase
                 .from('sales')
@@ -80,13 +76,19 @@ export default function SaleDetailScreen() {
                 Alert.alert("Error", "Sale not found.");
                 router.back();
             }
-        } catch (error: any) {
-            console.error("Failed to fetch sale:", error);
+        } catch (fetchError: any) {
+            console.error("Failed to fetch sale:", fetchError);
             Alert.alert("Error", "Could not load sale details. Please check your internet or database.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, router]);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchSaleDetails();
+        }, [fetchSaleDetails])
+    );
 
     // Admin does not approve/reject sales.
     // Approvers handle approval; admin only handles payouts (mark paid) after approver approval.
@@ -117,6 +119,7 @@ export default function SaleDetailScreen() {
             Alert.alert("Success", "Sale marked as paid.");
             fetchSaleDetails();
         } catch (error) {
+            console.error("Failed to mark as paid:", error);
             Alert.alert("Error", "Failed to mark as paid.");
         } finally {
             setIsProcessing(false);
@@ -377,7 +380,7 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     zoomOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(0,0,0,0.3)',
         justifyContent: 'center',
         alignItems: 'center',

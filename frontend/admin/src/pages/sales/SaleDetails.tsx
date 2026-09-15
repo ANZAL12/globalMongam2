@@ -23,9 +23,17 @@ import {
   Copy,
   QrCode,
   FileDown,
-  Loader2
+  Loader2,
+  Printer
 } from 'lucide-react';
-import { exportSingleSaleToPdf } from '../../utils/salesPdfExport';
+import {
+  exportSingleSaleToPdf,
+  generateSingleSaleHtml,
+  openSingleSaleInSystemViewer,
+  printImage,
+  printHtml,
+} from '../../utils/salesPdfExport';
+import { PrintPreviewModal } from '../../components/PrintPreviewModal';
 
 export function SaleDetails() {
   const { id } = useParams();
@@ -41,6 +49,58 @@ export function SaleDetails() {
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [isLatestDuplicate, setIsLatestDuplicate] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [printingPdf, setPrintingPdf] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    htmlContent: string;
+    onPrint: () => void;
+    onOpenInSystemViewer?: () => Promise<void>;
+    onDownloadPdf?: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    htmlContent: '',
+    onPrint: () => {},
+  });
+
+  const handlePrintSale = async () => {
+    if (!sale) return;
+    try {
+      setPrintingPdf(true);
+      const saleWithApprover = {
+        ...sale,
+        approver_name: approverName,
+      };
+      const html = await generateSingleSaleHtml(saleWithApprover as any);
+      setPreviewModal({
+        isOpen: true,
+        title: `Sale Voucher Preview - ${sale.bill_no || sale.id.slice(0, 8)}`,
+        htmlContent: html,
+        onPrint: () => printHtml(html),
+        onOpenInSystemViewer: async () => {
+          await openSingleSaleInSystemViewer(saleWithApprover as any);
+        },
+        onDownloadPdf: async () => {
+          await exportSingleSaleToPdf(saleWithApprover as any);
+        },
+      });
+    } catch (err) {
+      console.error('Failed to print sale voucher:', err);
+      showAlert({
+        title: 'Print Failed',
+        message: 'Could not prepare print preview. Please try again.',
+        severity: 'error',
+      });
+    } finally {
+      setPrintingPdf(false);
+    }
+  };
+
+  const handlePrintBillImage = () => {
+    if (!sale?.bill_image_url) return;
+    printImage(sale.bill_image_url, `Bill_${sale.bill_no || sale.id}`);
+  };
 
   const handleDownloadPdf = async () => {
     if (!sale) return;
@@ -353,19 +413,35 @@ export function SaleDetails() {
           </div>
         </div>
 
-        <button
-          onClick={handleDownloadPdf}
-          disabled={exportingPdf}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
-          title="Download official sale docket & voucher as PDF"
-        >
-          {exportingPdf ? (
-            <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
-          ) : (
-            <FileDown className="h-4 w-4 text-rose-600" />
-          )}
-          <span>{exportingPdf ? 'Generating PDF...' : 'Download PDF Voucher'}</span>
-        </button>
+        <div className="flex items-center space-x-2.5">
+          <button
+            onClick={handlePrintSale}
+            disabled={printingPdf}
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+            title="Print only that full page of all details for this sale (docket format, not table)"
+          >
+            {printingPdf ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <Printer className="h-4 w-4 text-white" />
+            )}
+            <span>{printingPdf ? 'Preparing...' : 'Print Full Details Page'}</span>
+          </button>
+
+          <button
+            onClick={handleDownloadPdf}
+            disabled={exportingPdf}
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
+            title="Download official sale docket & voucher as PDF"
+          >
+            {exportingPdf ? (
+              <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
+            ) : (
+              <FileDown className="h-4 w-4 text-rose-600" />
+            )}
+            <span>{exportingPdf ? 'Generating PDF...' : 'Download PDF Voucher'}</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -520,15 +596,27 @@ export function SaleDetails() {
                       <ImageIcon className="h-4 w-4 mr-2 text-indigo-500" />
                       Submitted Bill Attachment
                     </h3>
-                    <a 
-                      href={sale.bill_image_url || '#'} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700 flex items-center group"
-                    >
-                      Open in New Tab
-                      <ExternalLink className="ml-1 h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </a>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={handlePrintBillImage}
+                        className="text-[10px] font-bold text-gray-500 hover:text-indigo-600 uppercase tracking-widest flex items-center group cursor-pointer transition-colors"
+                        title="Print submitted bill image"
+                      >
+                        <Printer className="mr-1 h-3.5 w-3.5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                        Print Bill Image
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <a 
+                        href={sale.bill_image_url || '#'} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700 flex items-center group"
+                      >
+                        Open in New Tab
+                        <ExternalLink className="ml-1 h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </a>
+                    </div>
                   </div>
                   <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm relative group bg-gray-50">
                     <img 
@@ -719,6 +807,16 @@ export function SaleDetails() {
            </div>
         </div>
       </div>
+
+      <PrintPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={() => setPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={previewModal.title}
+        htmlContent={previewModal.htmlContent}
+        onPrint={previewModal.onPrint}
+        onOpenInSystemViewer={previewModal.onOpenInSystemViewer}
+        onDownloadPdf={previewModal.onDownloadPdf}
+      />
     </div>
   );
 }

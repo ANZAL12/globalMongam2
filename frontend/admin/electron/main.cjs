@@ -342,6 +342,23 @@ function registerCloudinaryHandlers() {
     // Legacy support
     return ipcMain.emit('supabase:createUser', event, { ...data, role: 'promoter' });
   });
+
+  // Open PDF directly in OS default viewer (Microsoft Edge / Adobe Acrobat) for full print preview
+  ipcMain.handle('system:openPdf', async (event, { base64Data, filename }) => {
+    try {
+      const fs = require('fs');
+      const tempDir = app.getPath('temp');
+      const safeFilename = (filename || `document_${Date.now()}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+      const tempPath = path.join(tempDir, safeFilename);
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(tempPath, buffer);
+      await shell.openPath(tempPath);
+      return { success: true, path: tempPath };
+    } catch (err) {
+      console.error('Error opening PDF in system viewer:', err);
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 app.on('window-all-closed', () => {

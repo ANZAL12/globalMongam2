@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Sale } from '../types';
-import { 
-  TrendingUp, 
-  Clock, 
-  CheckCircle, 
+import {
+  TrendingUp,
+  Clock,
+  CheckCircle,
   CreditCard,
-  ArrowUpRight
+  ArrowUpRight,
+  Printer
 } from 'lucide-react';
+import {
+  exportAllSalesToPdf,
+  generateAllSalesHtml,
+  openAllSalesInSystemViewer,
+  printHtml,
+} from '../utils/salesPdfExport';
+import { PrintPreviewModal } from '../components/PrintPreviewModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
 } from 'recharts';
 
@@ -25,6 +33,19 @@ export function Dashboard() {
   const { profile, isApprover } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    htmlContent: string;
+    onPrint: () => void;
+    onOpenInSystemViewer?: () => Promise<void>;
+    onDownloadPdf?: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    htmlContent: '',
+    onPrint: () => {},
+  });
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -54,13 +75,13 @@ export function Dashboard() {
         const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
-        
+
         const mappedSales = (data || []).map((sale: any) => ({
           ...sale,
           promoter_email: sale.promoter?.email || 'Unknown',
           approver_name: sale.approver?.full_name || sale.approver?.email || null,
         }));
-        
+
         setSales(mappedSales);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -89,30 +110,48 @@ export function Dashboard() {
     },
     {
       name: 'Total Approved',
-      value: sales.filter(s => s.status === 'approver_approved' || s.status === 'approved').length,
+      value: sales.filter(s => s.status === 'approver_approved' || s.status === 'approved' || s.status === 'paid').length,
       icon: CheckCircle,
       color: 'bg-emerald-500',
       link: '/sales?status=approver_approved'
     },
     {
       name: 'Incentives Paid',
-      value: sales.filter(s => s.payment_status === 'paid').length,
+      value: sales.filter(s => s.payment_status === 'paid' || s.status === 'paid').length,
       icon: CreditCard,
       color: 'bg-purple-500',
       link: '/sales?status=paid'
     },
   ];
 
-  const approvedSales = sales.filter(s => s.status === 'approver_approved' || s.status === 'approved');
-  const trendDataMap = new Map<string, number>();
-  [...approvedSales].reverse().forEach(sale => {
-    const date = new Date(sale.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    trendDataMap.set(date, (trendDataMap.get(date) || 0) + Number(sale.bill_amount || 0));
+  // Map graph based on Paid Status
+  const paidSales = sales.filter(s => s.payment_status === 'paid' || s.status === 'paid');
+  const sortedPaidSales = [...paidSales].sort(
+    (a, b) => new Date(a.paid_at || a.created_at).getTime() - new Date(b.paid_at || b.created_at).getTime()
+  );
+
+  const isMultiMonth = sortedPaidSales.length > 1 &&
+    (new Date(sortedPaidSales[sortedPaidSales.length - 1].paid_at || sortedPaidSales[sortedPaidSales.length - 1].created_at).getTime() -
+     new Date(sortedPaidSales[0].paid_at || sortedPaidSales[0].created_at).getTime()) > 60 * 24 * 60 * 60 * 1000;
+
+  const trendDataMap = new Map<string, { date: string; amount: number }>();
+  sortedPaidSales.forEach(sale => {
+    const d = new Date(sale.paid_at || sale.created_at);
+    const key = isMultiMonth
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    const date = isMultiMonth
+      ? d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      : d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+
+    if (!trendDataMap.has(key)) {
+      trendDataMap.set(key, { date, amount: 0 });
+    }
+    trendDataMap.get(key)!.amount += Number(sale.bill_amount || 0);
   });
-  const trendData = Array.from(trendDataMap.entries()).map(([date, amount]) => ({
-    date,
-    amount
-  }));
+
+  const trendData = Array.from(trendDataMap.values());
 
   if (loading) {
     return (
@@ -122,13 +161,49 @@ export function Dashboard() {
     );
   }
 
+  const handlePrintOverview = async () => {
+    try {
+      const html = await generateAllSalesHtml(sales as any, {
+        filterTitle: 'Dashboard Overview & Sales Summary',
+      });
+      setPreviewModal({
+        isOpen: true,
+        title: 'Dashboard Overview & Sales Summary Preview',
+        htmlContent: html,
+        onPrint: () => printHtml(html),
+        onOpenInSystemViewer: async () => {
+          await openAllSalesInSystemViewer(sales as any, {
+            filterTitle: 'Dashboard Overview & Sales Summary',
+          });
+        },
+        onDownloadPdf: async () => {
+          await exportAllSalesToPdf(sales as any, {
+            filterTitle: 'Dashboard Overview & Sales Summary',
+          });
+        },
+      });
+    } catch (err) {
+      console.error('Failed to open print preview:', err);
+    }
+  };
+
   return (
     <div className="w-full space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          {isApprover ? 'Approver Overview' : 'Admin Overview'}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">Welcome back! Here's what's happening today.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            {isApprover ? 'Approver Overview' : 'Admin Overview'}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">Welcome back! Here's what's happening today.</p>
+        </div>
+        <button
+          onClick={handlePrintOverview}
+          disabled={sales.length === 0}
+          className="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all disabled:opacity-50"
+        >
+          <Printer className="h-4 w-4 mr-2 text-gray-500" />
+          Print Overview
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -151,30 +226,6 @@ export function Dashboard() {
         ))}
       </div>
 
-      <div className="bg-white shadow-sm border border-gray-100 rounded-2xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Overall Sales Trend</h2>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `₹${val}`} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                itemStyle={{ color: '#111827', fontWeight: 600 }}
-                formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Amount']}
-              />
-              <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
 
       <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
@@ -209,15 +260,14 @@ export function Dashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.product_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{sale.bill_amount}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
-                      sale.status === 'approver_approved'
+                    <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${sale.status === 'approver_approved'
                         ? 'bg-blue-100 text-blue-800'
                         : sale.status === 'approved' || sale.status === 'paid'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : sale.status === 'rejected'
-                        ? 'bg-rose-100 text-rose-800'
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : sale.status === 'rejected'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-orange-100 text-orange-800'
+                      }`}>
                       {sale.status === 'approver_approved'
                         ? `Approved by ${sale.approver_name || 'Approver'}`
                         : sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
@@ -239,6 +289,16 @@ export function Dashboard() {
           </table>
         </div>
       </div>
+
+      <PrintPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={() => setPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={previewModal.title}
+        htmlContent={previewModal.htmlContent}
+        onPrint={previewModal.onPrint}
+        onOpenInSystemViewer={previewModal.onOpenInSystemViewer}
+        onDownloadPdf={previewModal.onDownloadPdf}
+      />
     </div>
   );
 }

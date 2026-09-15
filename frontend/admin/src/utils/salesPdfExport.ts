@@ -23,7 +23,10 @@ export interface ExportableSale {
   approver_notes?: string | null;
   rejection_reason?: string | null;
   transaction_id?: string | null;
+  bill_image_url?: string | null;
 }
+
+let cachedLogoData: string | null = null;
 
 /**
  * Helper to convert image URL/asset into base64 data URL
@@ -55,6 +58,12 @@ function getBase64Image(url: string): Promise<string> {
     };
     img.src = url;
   });
+}
+
+async function getLogoBase64(): Promise<string> {
+  if (cachedLogoData) return cachedLogoData;
+  cachedLogoData = await getBase64Image(logoUrl);
+  return cachedLogoData;
 }
 
 /**
@@ -110,15 +119,214 @@ function getStatusLabel(status: string, approverName?: string | null): string {
 }
 
 /**
- * Export all sales or filtered sales to a comprehensive PDF
+ * Universal print helper that prints HTML using an isolated iframe.
+ * Works seamlessly in both standard browsers and Electron without popups,
+ * ensuring full visual print preview support without "preview not supported" errors.
  */
-export async function exportAllSalesToPdf(
+export function printHtml(html: string): void {
+  const existing = document.getElementById('global-print-frame');
+  if (existing) {
+    existing.remove();
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'global-print-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.top = '-10000px';
+  iframe.style.left = '-10000px';
+  iframe.style.width = '1000px';
+  iframe.style.height = '1000px';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    alert('Unable to initiate print interface.');
+    return;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const triggerPrint = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (err) {
+      console.error('Print execution error:', err);
+    }
+    // Clean up iframe after printing dialog closes or timeout
+    setTimeout(() => {
+      try {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      } catch {
+        // ignore
+      }
+    }, 60000);
+  };
+
+  const images = doc.images;
+  if (images.length > 0) {
+    let loaded = 0;
+    const total = images.length;
+    const onImgComplete = () => {
+      loaded++;
+      if (loaded >= total) {
+        setTimeout(triggerPrint, 150);
+      }
+    };
+    for (let i = 0; i < total; i++) {
+      if (images[i].complete) {
+        loaded++;
+      } else {
+        images[i].onload = onImgComplete;
+        images[i].onerror = onImgComplete;
+      }
+    }
+    if (loaded >= total) {
+      setTimeout(triggerPrint, 150);
+    }
+  } else {
+    setTimeout(triggerPrint, 150);
+  }
+}
+
+/**
+ * Triggers document export/print. In Electron or web contexts where direct
+ * PDF blob previewing is not natively supported by the printer dialog,
+ * it saves the file directly.
+ */
+export function printPdfDoc(doc: jsPDF, filename = 'document.pdf'): void {
+  try {
+    doc.save(filename);
+  } catch (err) {
+    console.error('Failed to save document:', err);
+  }
+}
+
+/**
+ * Opens a generated jsPDF document in the system default PDF viewer
+ * (e.g. Microsoft Edge / Adobe Acrobat on Windows) with full interactive preview and printing.
+ */
+export async function openPdfInSystemViewer(doc: jsPDF, filename = 'document.pdf'): Promise<boolean> {
+  try {
+    const dataUri = doc.output('datauristring');
+    const base64Data = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
+    if ((window as any).electron?.system?.openPdf) {
+      const res = await (window as any).electron.system.openPdf({ base64Data, filename });
+      return !!res?.success;
+    } else {
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to open PDF in system viewer:', err);
+    doc.save(filename);
+    return false;
+  }
+}
+
+/**
+ * Helper to print an image (e.g. submitted bill) directly with full print preview
+ */
+export function printImage(imageUrl: string, title = 'Bill Attachment'): void {
+  const printDate = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <style>
+          @page {
+            size: auto;
+            margin: 10mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .header {
+            width: 100%;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .title { font-size: 16px; font-weight: 800; color: #e11d48; }
+          .subtitle { font-size: 13px; font-weight: 600; color: #334155; }
+          .meta { font-size: 11px; color: #64748b; text-align: right; }
+          .img-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+          }
+          img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+          }
+          @media print {
+            body { padding: 0; }
+            .header { margin-bottom: 12px; }
+            img { max-height: 90vh; border: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">GLOBAL AGENCIES</div>
+            <div class="subtitle">BILL ATTACHMENT / PROOF OF SALE</div>
+          </div>
+          <div class="meta">
+            <div><strong>Document:</strong> ${title}</div>
+            <div><strong>Printed:</strong> ${printDate}</div>
+          </div>
+        </div>
+        <div class="img-container">
+          <img src="${imageUrl}" alt="${title}" />
+        </div>
+      </body>
+    </html>
+  `;
+  printHtml(html);
+}
+
+/**
+ * Generate all sales / report PDF Document
+ */
+export async function generateAllSalesPdfDoc(
   sales: ExportableSale[],
   options?: {
     filterTitle?: string;
     searchTerm?: string;
   }
-): Promise<void> {
+): Promise<jsPDF> {
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
@@ -130,7 +338,7 @@ export async function exportAllSalesToPdf(
   const margin = 12;
 
   // 1. Fetch base64 logo
-  const logoData = await getBase64Image(logoUrl);
+  const logoData = await getLogoBase64();
 
   // Calculate Summary KPIs
   const totalCount = sales.length;
@@ -311,7 +519,6 @@ export async function exportAllSalesToPdf(
       10: { cellWidth: 23 },
     },
     didDrawPage: (data) => {
-      // Re-add top header logo on subsequent pages if wanted
       if (data.pageNumber > 1 && logoData) {
         doc.addImage(logoData, 'PNG', margin, 5, 12, 12);
         doc.setFont('helvetica', 'bold');
@@ -335,17 +542,309 @@ export async function exportAllSalesToPdf(
     },
   });
 
-  // Generate Filename
+  return doc;
+}
+
+/**
+ * Export all sales or filtered sales to a comprehensive PDF
+ */
+export async function exportAllSalesToPdf(
+  sales: ExportableSale[],
+  options?: {
+    filterTitle?: string;
+    searchTerm?: string;
+  }
+): Promise<void> {
+  const doc = await generateAllSalesPdfDoc(sales, options);
   const dateStamp = new Date().toISOString().slice(0, 10);
   doc.save(`Global_Agencies_Sales_Report_${dateStamp}.pdf`);
 }
 
 /**
- * Export a single sale voucher / docket with comprehensive details
+ * Generates the clean HTML string for the all-sales audit report
  */
-export async function exportSingleSaleToPdf(sale: ExportableSale): Promise<void> {
+export async function generateAllSalesHtml(
+  sales: ExportableSale[],
+  options?: {
+    filterTitle?: string;
+    searchTerm?: string;
+  }
+): Promise<string> {
+  const logoData = await getLogoBase64();
+  const dateStamp = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const totalSales = sales.length;
+  const totalBill = sales.reduce((sum, s) => sum + Number(s.bill_amount || 0), 0);
+  const totalIncentive = sales.reduce((sum, s) => sum + Number(s.incentive_amount || 0), 0);
+  const paidCount = sales.filter(s => s.payment_status === 'paid' || s.status === 'paid').length;
+
+  const rowsHtml = sales.map((sale, idx) => {
+    const isPaid = sale.payment_status === 'paid' || sale.status === 'paid';
+    const statusText = getStatusLabel(sale.status, sale.approver_name);
+    const dateFormatted = formatDate(sale.created_at);
+
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td>${dateFormatted}</td>
+        <td style="font-weight: 600; color: #0f172a;">${sale.bill_no || '-'}</td>
+        <td>
+          <div style="font-weight: 600; color: #0f172a;">${sale.promoter_name || 'N/A'}</div>
+          <div style="font-size: 10px; color: #64748b;">${sale.promoter_phone || sale.promoter_email || ''}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: #0f172a;">${sale.product_name || '-'}</div>
+          <div style="font-size: 10px; color: #64748b;">
+            ${sale.model_no ? 'M: ' + sale.model_no : ''} 
+            ${sale.serial_no ? ' | S/N: ' + sale.serial_no : ''}
+          </div>
+        </td>
+        <td style="text-align: right; font-weight: 600; color: #0f172a;">
+          ${formatCurrency(sale.bill_amount)}
+        </td>
+        <td style="text-align: right; font-weight: 600; color: #4338ca;">
+          ${formatCurrency(sale.incentive_amount)}
+        </td>
+        <td style="text-align: center;">
+          <span style="display: inline-block; padding: 2px 7px; font-size: 10px; font-weight: 600; border-radius: 9999px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+            ${statusText}
+          </span>
+        </td>
+        <td style="text-align: center;">
+          <span style="display: inline-block; padding: 2px 7px; font-size: 10px; font-weight: 600; border-radius: 9999px; background: ${isPaid ? '#ecfdf5' : '#fffbeb'}; color: ${isPaid ? '#065f46' : '#92400e'}; border: 1px solid ${isPaid ? '#a7f3d0' : '#fde68a'};">
+            ${isPaid ? 'Paid' : 'Unpaid'}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Global Agencies - Sales Audit Report</title>
+        <style>
+          @page {
+            size: landscape;
+            margin: 10mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 8px;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 12px;
+          }
+          .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          .logo {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+          }
+          .company-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #e11d48;
+            letter-spacing: -0.5px;
+          }
+          .report-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+          }
+          .meta-box {
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+          }
+          .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+          }
+          .kpi-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+          }
+          .kpi-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .kpi-val {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+          }
+          thead tr {
+            background-color: #f1f5f9;
+          }
+          th {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 700;
+            color: #334155;
+            font-size: 11px;
+          }
+          td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            vertical-align: middle;
+          }
+          tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+          }
+          .footer {
+            margin-top: 14px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #94a3b8;
+          }
+          @media print {
+            body { padding: 0; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="brand-box">
+            ${logoData ? `<img class="logo" src="${logoData}" alt="Logo" />` : ''}
+            <div>
+              <div class="company-name">GLOBAL AGENCIES</div>
+              <div class="report-title">Sales Audit & Disbursement Report</div>
+            </div>
+          </div>
+          <div class="meta-box">
+            <div><strong>Filter:</strong> ${options?.filterTitle || 'All Records'}</div>
+            ${options?.searchTerm ? `<div><strong>Search:</strong> "${options.searchTerm}"</div>` : ''}
+            <div><strong>Printed:</strong> ${dateStamp}</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Records</div>
+            <div class="kpi-val">${totalSales}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Bill Amount</div>
+            <div class="kpi-val">${formatCurrency(totalBill)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Incentives</div>
+            <div class="kpi-val" style="color: #4338ca;">${formatCurrency(totalIncentive)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Paid Sales</div>
+            <div class="kpi-val" style="color: #059669;">${paidCount}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 25px; text-align: center;">#</th>
+              <th style="width: 110px;">Date</th>
+              <th style="width: 80px;">Bill No</th>
+              <th>Promoter</th>
+              <th>Product / Details</th>
+              <th style="text-align: right; width: 90px;">Bill Amount</th>
+              <th style="text-align: right; width: 90px;">Incentive</th>
+              <th style="text-align: center; width: 100px;">Status</th>
+              <th style="text-align: center; width: 70px;">Payment</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 20px; color: #94a3b8;">No sales records found</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>Global Agencies Confidential - Internal Audit & Accounts Record</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Print all sales or filtered sales report directly with full visual print preview
+ */
+export async function printAllSales(
+  sales: ExportableSale[],
+  options?: {
+    filterTitle?: string;
+    searchTerm?: string;
+  }
+): Promise<void> {
+  const html = await generateAllSalesHtml(sales, options);
+  printHtml(html);
+}
+
+/**
+ * Opens all sales report directly in the system PDF viewer (Microsoft Edge / Adobe Acrobat)
+ */
+export async function openAllSalesInSystemViewer(
+  sales: ExportableSale[],
+  options?: {
+    filterTitle?: string;
+    searchTerm?: string;
+  }
+): Promise<boolean> {
+  const doc = await generateAllSalesPdfDoc(sales, options);
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  return openPdfInSystemViewer(doc, `Global_Agencies_Sales_Report_${dateStamp}.pdf`);
+}
+
+/**
+ * Generate single sale voucher / docket PDF document
+ */
+export async function generateSingleSalePdfDoc(sale: ExportableSale): Promise<jsPDF> {
   const doc = new jsPDF({
-    orientation: 'portrait',
+    orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
   });
@@ -353,9 +852,8 @@ export async function exportSingleSaleToPdf(sale: ExportableSale): Promise<void>
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 16;
-  const contentWidth = pageWidth - margin * 2;
 
-  const logoData = await getBase64Image(logoUrl);
+  const logoData = await getLogoBase64();
 
   // Header Logo & Branding
   if (logoData) {
@@ -504,25 +1002,6 @@ export async function exportSingleSaleToPdf(sale: ExportableSale): Promise<void>
 
   currentY = (doc as any).lastAutoTable.finalY + 16;
 
-  // Signatures / Authorization Section
-  if (currentY + 28 < pageHeight - 15) {
-    const sigBoxWidth = (contentWidth - 20) / 2;
-
-    // Approver / Auditor Signature
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.4);
-    doc.line(margin, currentY + 18, margin + sigBoxWidth, currentY + 18);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Audited & Approved By', margin, currentY + 23);
-
-    // Finance / Admin Signature
-    const finX = margin + sigBoxWidth + 20;
-    doc.line(finX, currentY + 18, finX + sigBoxWidth, currentY + 18);
-    doc.text('Authorized Finance Signatory', finX, currentY + 23);
-  }
-
   // Footer
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
@@ -530,6 +1009,522 @@ export async function exportSingleSaleToPdf(sale: ExportableSale): Promise<void>
   doc.text('Global Agencies Official Record - System Generated Document', margin, pageHeight - 8);
   doc.text('Page 1 of 1', pageWidth - margin - 16, pageHeight - 8);
 
+  return doc;
+}
+
+/**
+ * Export a single sale voucher / docket with comprehensive details
+ */
+export async function exportSingleSaleToPdf(sale: ExportableSale): Promise<void> {
+  const doc = await generateSingleSalePdfDoc(sale);
   const billOrId = sale.bill_no || sale.id.slice(0, 8);
   doc.save(`Global_Agencies_Sale_Voucher_${billOrId}.pdf`);
+}
+
+/**
+ * Generates the clean HTML string for a single sale voucher & docket
+ */
+export async function generateSingleSaleHtml(sale: ExportableSale): Promise<string> {
+  const logoData = await getLogoBase64();
+  const dateFormatted = formatDate(sale.created_at);
+  const paidDateFormatted = sale.paid_at ? formatDate(sale.paid_at) : 'Not Paid';
+  const isPaid = sale.payment_status === 'paid' || sale.status === 'paid';
+  const statusLabel = getStatusLabel(sale.status, sale.approver_name);
+  const printDate = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Sale Voucher - ${sale.bill_no || sale.id.slice(0, 8)}</title>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 8px 14px;
+            width: 100%;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 16px;
+          }
+          .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          .logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+          }
+          .company-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #e11d48;
+            letter-spacing: -0.5px;
+          }
+          .voucher-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .meta-box {
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+          }
+          .badges {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 6px;
+          }
+          .badge {
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+          }
+          .badge-status {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+          }
+          .badge-paid {
+            background: ${isPaid ? '#ecfdf5' : '#fffbeb'};
+            color: ${isPaid ? '#065f46' : '#92400e'};
+            border: 1px solid ${isPaid ? '#a7f3d0' : '#fde68a'};
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 14px;
+          }
+          .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: #f8fafc;
+          }
+          .card-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+          }
+          .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 12.5px;
+          }
+          .row .label {
+            color: #64748b;
+            font-weight: 500;
+          }
+          .row .val {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+          }
+          .highlight-card {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+          }
+          .highlight-val {
+            font-size: 15px;
+            font-weight: 800;
+            color: #4338ca;
+          }
+          .footer {
+            margin-top: 18px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10.5px;
+            color: #94a3b8;
+          }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="brand-box">
+            ${logoData ? `<img class="logo" src="${logoData}" alt="Logo" />` : ''}
+            <div>
+              <div class="company-name">GLOBAL AGENCIES</div>
+              <div class="voucher-title">SALE VOUCHER & AUDIT DOCKET</div>
+            </div>
+          </div>
+          <div class="meta-box">
+            <div><strong>Docket ID:</strong> ${sale.id}</div>
+            <div><strong>Printed:</strong> ${printDate}</div>
+            <div class="badges">
+              ${isPaid ? (
+                `<span class="badge badge-paid">Paid</span>`
+              ) : (
+                `<span class="badge badge-status">${statusLabel}</span>
+                 <span class="badge badge-paid">Unpaid</span>`
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Sale & Product Information</div>
+            <div class="row"><span class="label">Product:</span><span class="val">${sale.product_name || '-'}</span></div>
+            <div class="row"><span class="label">Model No:</span><span class="val">${sale.model_no || '-'}</span></div>
+            <div class="row"><span class="label">Serial No:</span><span class="val">${sale.serial_no || '-'}</span></div>
+            <div class="row"><span class="label">Bill / Invoice No:</span><span class="val">${sale.bill_no || '-'}</span></div>
+            <div class="row"><span class="label">Submission Date:</span><span class="val">${dateFormatted}</span></div>
+            <div class="row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+              <span class="label" style="font-weight: 700; color: #0f172a;">Bill Amount:</span>
+              <span class="val" style="font-size: 13px; font-weight: 800; color: #0f172a;">${formatCurrency(sale.bill_amount)}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Promoter Information</div>
+            <div class="row"><span class="label">Name:</span><span class="val">${sale.promoter_name || 'N/A'}</span></div>
+            <div class="row"><span class="label">Email:</span><span class="val">${sale.promoter_email || 'N/A'}</span></div>
+            <div class="row"><span class="label">Phone:</span><span class="val">${sale.promoter_phone || 'N/A'}</span></div>
+            <div class="row"><span class="label">Google Pay:</span><span class="val">${sale.promoter_gpay || '-'}</span></div>
+            <div class="row"><span class="label">UPI ID:</span><span class="val">${sale.promoter_upi || '-'}</span></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Approval & Audit Status</div>
+            <div class="row"><span class="label">Approval Status:</span><span class="val">${isPaid ? 'Approved' : statusLabel}</span></div>
+            <div class="row"><span class="label">Approved By:</span><span class="val">${sale.approver_name || 'Pending'}</span></div>
+            <div class="row"><span class="label">Approver Notes:</span><span class="val">${sale.approver_notes || 'None'}</span></div>
+            ${sale.rejection_reason ? `<div class="row"><span class="label" style="color: #b91c1c;">Rejection Reason:</span><span class="val" style="color: #b91c1c;">${sale.rejection_reason}</span></div>` : ''}
+          </div>
+
+          <div class="card highlight-card">
+            <div class="card-title" style="color: #3730a3; border-color: #c7d2fe;">Incentive & Settlement</div>
+            <div class="row"><span class="label">Payment Status:</span><span class="val">${isPaid ? 'Paid' : 'Unpaid'}</span></div>
+            <div class="row"><span class="label">Paid At:</span><span class="val">${paidDateFormatted}</span></div>
+            <div class="row"><span class="label">Transaction ID:</span><span class="val">${sale.transaction_id || '-'}</span></div>
+            <div class="row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #a5b4fc;">
+              <span class="label" style="font-weight: 700; color: #312e81;">Incentive Amount:</span>
+              <span class="val highlight-val">${formatCurrency(sale.incentive_amount)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>Global Agencies Official Record - System Generated Document</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Print a single sale voucher / docket directly with full visual print preview
+ */
+export async function printSingleSale(sale: ExportableSale): Promise<void> {
+  const html = await generateSingleSaleHtml(sale);
+  printHtml(html);
+}
+
+/**
+ * Opens a single sale voucher / docket directly in system PDF viewer (Microsoft Edge / Adobe Acrobat)
+ */
+export async function openSingleSaleInSystemViewer(sale: ExportableSale): Promise<boolean> {
+  const doc = await generateSingleSalePdfDoc(sale);
+  const billOrId = sale.bill_no || sale.id.slice(0, 8);
+  return openPdfInSystemViewer(doc, `Global_Agencies_Sale_Voucher_${billOrId}.pdf`);
+}
+
+/**
+ * Generates full-page dockets of all details for multiple sales (1 sale docket per page, not table form)
+ */
+export async function generateMultiSaleFullPagesHtml(sales: ExportableSale[]): Promise<string> {
+  const logoData = await getLogoBase64();
+  const printDate = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const pagesHtml = sales.map((sale, index) => {
+    const dateFormatted = formatDate(sale.created_at);
+    const paidDateFormatted = sale.paid_at ? formatDate(sale.paid_at) : 'Not Paid';
+    const isPaid = sale.payment_status === 'paid' || sale.status === 'paid';
+    const statusLabel = getStatusLabel(sale.status, sale.approver_name);
+    const isLast = index === sales.length - 1;
+
+    return `
+      <div class="docket-page" style="${!isLast ? 'page-break-after: always; break-after: page; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 2px dashed #cbd5e1;' : ''}">
+        <div class="header">
+          <div class="brand-box">
+            ${logoData ? `<img class="logo" src="${logoData}" alt="Logo" />` : ''}
+            <div>
+              <div class="company-name">GLOBAL AGENCIES</div>
+              <div class="voucher-title">SALE VOUCHER & AUDIT DOCKET</div>
+            </div>
+          </div>
+          <div class="meta-box">
+            <div><strong>Docket ID:</strong> ${sale.id}</div>
+            <div><strong>Printed:</strong> ${printDate}</div>
+            <div class="badges">
+              ${isPaid ? (
+                `<span class="badge badge-paid">Paid</span>`
+              ) : (
+                `<span class="badge badge-status">${statusLabel}</span>
+                 <span class="badge badge-paid">Unpaid</span>`
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Sale & Product Information</div>
+            <div class="row"><span class="label">Product:</span><span class="val">${sale.product_name || '-'}</span></div>
+            <div class="row"><span class="label">Model No:</span><span class="val">${sale.model_no || '-'}</span></div>
+            <div class="row"><span class="label">Serial No:</span><span class="val">${sale.serial_no || '-'}</span></div>
+            <div class="row"><span class="label">Bill / Invoice No:</span><span class="val">${sale.bill_no || '-'}</span></div>
+            <div class="row"><span class="label">Submission Date:</span><span class="val">${dateFormatted}</span></div>
+            <div class="row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+              <span class="label" style="font-weight: 700; color: #0f172a;">Bill Amount:</span>
+              <span class="val" style="font-size: 13px; font-weight: 800; color: #0f172a;">${formatCurrency(sale.bill_amount)}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Promoter Information</div>
+            <div class="row"><span class="label">Name:</span><span class="val">${sale.promoter_name || 'N/A'}</span></div>
+            <div class="row"><span class="label">Email:</span><span class="val">${sale.promoter_email || 'N/A'}</span></div>
+            <div class="row"><span class="label">Phone:</span><span class="val">${sale.promoter_phone || 'N/A'}</span></div>
+            <div class="row"><span class="label">Google Pay:</span><span class="val">${sale.promoter_gpay || '-'}</span></div>
+            <div class="row"><span class="label">UPI ID:</span><span class="val">${sale.promoter_upi || '-'}</span></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Approval & Audit Status</div>
+            <div class="row"><span class="label">Approval Status:</span><span class="val">${isPaid ? 'Approved' : statusLabel}</span></div>
+            <div class="row"><span class="label">Approved By:</span><span class="val">${sale.approver_name || 'Pending'}</span></div>
+            <div class="row"><span class="label">Approver Notes:</span><span class="val">${sale.approver_notes || 'None'}</span></div>
+            ${sale.rejection_reason ? `<div class="row"><span class="label" style="color: #b91c1c;">Rejection Reason:</span><span class="val" style="color: #b91c1c;">${sale.rejection_reason}</span></div>` : ''}
+          </div>
+
+          <div class="card highlight-card">
+            <div class="card-title" style="color: #3730a3; border-color: #c7d2fe;">Incentive & Settlement</div>
+            <div class="row"><span class="label">Payment Status:</span><span class="val">${isPaid ? 'Paid' : 'Unpaid'}</span></div>
+            <div class="row"><span class="label">Paid At:</span><span class="val">${paidDateFormatted}</span></div>
+            <div class="row"><span class="label">Transaction ID:</span><span class="val">${sale.transaction_id || '-'}</span></div>
+            <div class="row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #a5b4fc;">
+              <span class="label" style="font-weight: 700; color: #312e81;">Incentive Amount:</span>
+              <span class="val highlight-val">${formatCurrency(sale.incentive_amount)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>Global Agencies Official Record - Docket (${index + 1} of ${sales.length})</div>
+          <div>Page ${index + 1} of ${sales.length}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Sale Dockets - Full Page Details</title>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 8px 14px;
+            width: 100%;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 16px;
+          }
+          .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          .logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+          }
+          .company-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #e11d48;
+            letter-spacing: -0.5px;
+          }
+          .voucher-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .meta-box {
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+          }
+          .badges {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 6px;
+          }
+          .badge {
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+          }
+          .badge-status {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+          }
+          .badge-paid {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 14px;
+          }
+          .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: #f8fafc;
+          }
+          .card-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+          }
+          .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 12.5px;
+          }
+          .row .label {
+            color: #64748b;
+            font-weight: 500;
+          }
+          .row .val {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+          }
+          .highlight-card {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+          }
+          .highlight-val {
+            font-size: 15px;
+            font-weight: 800;
+            color: #4338ca;
+          }
+          .footer {
+            margin-top: 18px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10.5px;
+            color: #94a3b8;
+          }
+          @media print {
+            body { padding: 0; }
+            .docket-page {
+              page-break-after: always;
+              break-after: page;
+              border-bottom: none !important;
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .docket-page:last-child {
+              page-break-after: avoid;
+              break-after: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+    </html>
+  `;
 }
