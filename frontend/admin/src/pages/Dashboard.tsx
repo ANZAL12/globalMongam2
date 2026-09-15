@@ -18,15 +18,6 @@ import {
 import { PrintPreviewModal } from '../components/PrintPreviewModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -124,34 +115,6 @@ export function Dashboard() {
     },
   ];
 
-  // Map graph based on Paid Status
-  const paidSales = sales.filter(s => s.payment_status === 'paid' || s.status === 'paid');
-  const sortedPaidSales = [...paidSales].sort(
-    (a, b) => new Date(a.paid_at || a.created_at).getTime() - new Date(b.paid_at || b.created_at).getTime()
-  );
-
-  const isMultiMonth = sortedPaidSales.length > 1 &&
-    (new Date(sortedPaidSales[sortedPaidSales.length - 1].paid_at || sortedPaidSales[sortedPaidSales.length - 1].created_at).getTime() -
-     new Date(sortedPaidSales[0].paid_at || sortedPaidSales[0].created_at).getTime()) > 60 * 24 * 60 * 60 * 1000;
-
-  const trendDataMap = new Map<string, { date: string; amount: number }>();
-  sortedPaidSales.forEach(sale => {
-    const d = new Date(sale.paid_at || sale.created_at);
-    const key = isMultiMonth
-      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-    const date = isMultiMonth
-      ? d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-      : d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-
-    if (!trendDataMap.has(key)) {
-      trendDataMap.set(key, { date, amount: 0 });
-    }
-    trendDataMap.get(key)!.amount += Number(sale.bill_amount || 0);
-  });
-
-  const trendData = Array.from(trendDataMap.values());
 
   if (loading) {
     return (
