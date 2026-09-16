@@ -14,6 +14,7 @@ export interface ExportableSale {
   payment_status?: string | null;
   created_at: string;
   paid_at?: string | null;
+  approved_at?: string | null;
   promoter_name?: string | null;
   promoter_email?: string | null;
   promoter_phone?: string | null;

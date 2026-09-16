@@ -6,7 +6,6 @@ import {
   ShoppingBag, 
   Calendar, 
   User, 
-  Filter,
   CheckCircle2,
   XCircle,
   Clock,
@@ -14,7 +13,9 @@ import {
   FileDown,
   Loader2,
   Printer,
-  FileText
+  FileText,
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Pagination } from '../../components/Pagination';
@@ -39,6 +40,8 @@ type SalesListItem = Omit<Sale, 'status'> & {
   promoter_upi?: string | null;
   approver_name?: string | null;
   has_duplicate_serial?: boolean;
+  approved_at?: string | null;
+  paid_at?: string | null;
 };
 
 export function SalesList() {
@@ -50,7 +53,13 @@ export function SalesList() {
   const rowsPerPage = 10;
   
   const initialStatus = searchParams.get('status') || 'all';
+  const initialDate = searchParams.get('date') || 'all';
+  const initialCustomDate = searchParams.get('customDate') || '';
+
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [dateFilter, setDateFilter] = useState<string>(initialDate);
+  const [customDate, setCustomDate] = useState<string>(initialCustomDate);
+
   const [exporting, setExporting] = useState(false);
   const [printingReport, setPrintingReport] = useState(false);
   const [printingSaleId, setPrintingSaleId] = useState<string | null>(null);
@@ -69,11 +78,97 @@ export function SalesList() {
   });
   const navigate = useNavigate();
 
+  // Date comparison helpers
+  const isSameDay = (dateStr: string | null | undefined, targetDate: Date = new Date()) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    return (
+      d.getFullYear() === targetDate.getFullYear() &&
+      d.getMonth() === targetDate.getMonth() &&
+      d.getDate() === targetDate.getDate()
+    );
+  };
+
+  const isYesterday = (dateStr: string | null | undefined) => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return isSameDay(dateStr, y);
+  };
+
+  const isThisWeek = (dateStr: string | null | undefined) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    return d >= startOfWeek;
+  };
+
+  const isThisMonth = (dateStr: string | null | undefined) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  };
+
+  const isSpecificDate = (dateStr: string | null | undefined, ymd: string) => {
+    if (!dateStr || !ymd) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}` === ymd;
+  };
+
+  const checkDateMatch = (dateStr: string | null | undefined, filter: string, custom: string) => {
+    if (!dateStr) return false;
+    if (filter === 'today') return isSameDay(dateStr);
+    if (filter === 'yesterday') return isYesterday(dateStr);
+    if (filter === 'this_week') return isThisWeek(dateStr);
+    if (filter === 'this_month') return isThisMonth(dateStr);
+    if (filter === 'custom') return isSpecificDate(dateStr, custom);
+    return true;
+  };
+
+  // Generate human-readable filter description for previews & exported files
+  const getFilterDescription = () => {
+    let statusText = '';
+    if (statusFilter === 'pending') statusText = 'Pending';
+    else if (statusFilter === 'approver_approved') statusText = 'Approved';
+    else if (statusFilter === 'paid') statusText = 'Paid';
+    else if (statusFilter === 'rejected') statusText = 'Rejected';
+
+    let dateText = '';
+    if (dateFilter === 'today') dateText = "Today's";
+    else if (dateFilter === 'yesterday') dateText = "Yesterday's";
+    else if (dateFilter === 'this_week') dateText = 'This Week';
+    else if (dateFilter === 'this_month') dateText = 'This Month';
+    else if (dateFilter === 'custom' && customDate) dateText = customDate;
+
+    if (dateText && statusText) {
+      return `${dateText} ${statusText} Sales`;
+    } else if (dateText) {
+      return `${dateText} Sales (All Status)`;
+    } else if (statusText) {
+      return `${statusText} Sales`;
+    }
+    return 'All Sales';
+  };
+
+  const filterDesc = getFilterDescription();
+
   const handleExportPdf = async () => {
     try {
       setExporting(true);
       await exportAllSalesToPdf(filteredSales, {
-        filterTitle: statusFilter,
+        filterTitle: filterDesc,
         searchTerm: searchTerm,
       });
     } catch (err) {
@@ -88,23 +183,23 @@ export function SalesList() {
     try {
       setPrintingReport(true);
       const html = await generateAllSalesHtml(filteredSales, {
-        filterTitle: statusFilter,
+        filterTitle: filterDesc,
         searchTerm: searchTerm,
       });
       setPreviewModal({
         isOpen: true,
-        title: 'Sales Audit & Disbursement Report Preview',
+        title: `Sales Report Preview (${filterDesc}) - ${filteredSales.length} Records`,
         htmlContent: html,
         onPrint: () => printHtml(html),
         onOpenInSystemViewer: async () => {
           await openAllSalesInSystemViewer(filteredSales, {
-            filterTitle: statusFilter,
+            filterTitle: filterDesc,
             searchTerm: searchTerm,
           });
         },
         onDownloadPdf: async () => {
           await exportAllSalesToPdf(filteredSales, {
-            filterTitle: statusFilter,
+            filterTitle: filterDesc,
             searchTerm: searchTerm,
           });
         },
@@ -123,7 +218,7 @@ export function SalesList() {
       const html = await generateMultiSaleFullPagesHtml(filteredSales as any);
       setPreviewModal({
         isOpen: true,
-        title: `Sale Dockets (Full Details) - ${filteredSales.length} Records`,
+        title: `Sale Dockets (${filterDesc}) - ${filteredSales.length} Records`,
         htmlContent: html,
         onPrint: () => printHtml(html),
       });
@@ -170,16 +265,48 @@ export function SalesList() {
       })[0]?.id;
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value;
+  const applyFilters = (newStatus: string, newDate: string, newCustomDate: string = '') => {
     setStatusFilter(newStatus);
+    setDateFilter(newDate);
+    setCustomDate(newCustomDate);
+
     if (newStatus === 'all') {
       searchParams.delete('status');
     } else {
       searchParams.set('status', newStatus);
     }
+
+    if (newDate === 'all') {
+      searchParams.delete('date');
+      searchParams.delete('customDate');
+    } else {
+      searchParams.set('date', newDate);
+      if (newDate === 'custom' && newCustomDate) {
+        searchParams.set('customDate', newCustomDate);
+      } else {
+        searchParams.delete('customDate');
+      }
+    }
+
     setSearchParams(searchParams, { replace: true });
     setCurrentPage(1);
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyFilters(e.target.value, dateFilter, customDate);
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyFilters(statusFilter, e.target.value, customDate);
+  };
+
+  const handleCustomDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    applyFilters(statusFilter, 'custom', e.target.value);
+  };
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    applyFilters('all', 'all', '');
   };
 
   useEffect(() => {
@@ -226,6 +353,8 @@ export function SalesList() {
           promoter_gpay: sale.promoter?.gpay_number || null,
           promoter_upi: sale.promoter?.upi_id || null,
           approver_name: sale.approver?.full_name || sale.approver?.email || null,
+          approved_at: sale.approved_at || null,
+          paid_at: sale.paid_at || null,
           has_duplicate_serial: (() => {
             const serialKey = normalizeSerial(sale.serial_no);
             if (!serialKey) return false;
@@ -243,7 +372,6 @@ export function SalesList() {
         setLoading(false);
       }
     }
-
 
     fetchSales();
 
@@ -269,14 +397,56 @@ export function SalesList() {
       s.promoter_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.bill_no?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+    const matchesStatus = 
+      statusFilter === 'all' 
+        ? true 
+        : statusFilter === 'paid'
+        ? (s.status === 'paid' || s.payment_status === 'paid')
+        : s.status === statusFilter;
+
+    const matchesDate = (() => {
+      if (dateFilter === 'all') return true;
+
+      if (statusFilter === 'pending') {
+        return checkDateMatch(s.created_at, dateFilter, customDate);
+      }
+      if (statusFilter === 'approver_approved') {
+        return checkDateMatch(s.approved_at || s.created_at, dateFilter, customDate);
+      }
+      if (statusFilter === 'paid') {
+        return checkDateMatch(s.paid_at || s.created_at, dateFilter, customDate);
+      }
+      
+      // If statusFilter is 'all' or 'rejected'
+      return (
+        checkDateMatch(s.created_at, dateFilter, customDate) ||
+        checkDateMatch(s.approved_at, dateFilter, customDate) ||
+        checkDateMatch(s.paid_at, dateFilter, customDate)
+      );
+    })();
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
+  // Overall status counts
   const awaitingApproverCount = sales.filter(s => s.status === 'pending').length;
   const readyToPayCount = sales.filter(s => s.status === 'approver_approved' && s.payment_status !== 'paid').length;
-  const paidCount = sales.filter(s => s.payment_status === 'paid').length;
+  const paidCount = sales.filter(s => s.payment_status === 'paid' || s.status === 'paid').length;
+
+  // Today-specific counts
+  const todayPendingCount = sales.filter(
+    s => s.status === 'pending' && isSameDay(s.created_at)
+  ).length;
+
+  const todayApprovedCount = sales.filter(
+    s => (s.status === 'approver_approved' || s.status === 'approved') && 
+         (isSameDay(s.approved_at) || (!s.approved_at && isSameDay(s.created_at)))
+  ).length;
+
+  const todayPaidCount = sales.filter(
+    s => (s.payment_status === 'paid' || s.status === 'paid') && 
+         (isSameDay(s.paid_at) || (!s.paid_at && isSameDay(s.created_at)))
+  ).length;
 
   const getSaleStatusLabel = (sale: any) => {
     if (sale.status === 'approver_approved') {
@@ -295,6 +465,11 @@ export function SalesList() {
       </div>
     );
   }
+
+  const isTodayApprovedActive = dateFilter === 'today' && statusFilter === 'approver_approved';
+  const isTodayPendingActive = dateFilter === 'today' && statusFilter === 'pending';
+  const isTodayPaidActive = dateFilter === 'today' && statusFilter === 'paid';
+  const isAllSalesActive = dateFilter === 'all' && statusFilter === 'all' && !searchTerm;
 
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col w-full space-y-6 min-h-0">
@@ -318,21 +493,21 @@ export function SalesList() {
             onClick={handlePrintFullDetailsPages}
             disabled={printingReport || filteredSales.length === 0}
             className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
-            title="Print each sale as a full page of all details (docket format, not table)"
+            title="Print each filtered sale as a full page of all details (docket format)"
           >
             {printingReport ? (
               <Loader2 className="h-4 w-4 animate-spin text-white" />
             ) : (
               <FileText className="h-4 w-4 text-white" />
             )}
-            <span>Print Full Details</span>
+            <span>Print Full Details ({filteredSales.length})</span>
           </button>
 
           <button
             onClick={handlePrintReport}
             disabled={printingReport || filteredSales.length === 0}
             className="inline-flex items-center justify-center space-x-2 px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
-            title="Print summary table report"
+            title="Print summary table report for filtered sales"
           >
             <Printer className="h-4 w-4 text-gray-500" />
             <span>Table Report</span>
@@ -342,7 +517,7 @@ export function SalesList() {
             onClick={handleExportPdf}
             disabled={exporting || filteredSales.length === 0}
             className="inline-flex items-center justify-center space-x-2 px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-semibold text-sm rounded-xl transition-all shadow-sm hover:shadow shrink-0 cursor-pointer"
-            title="Download complete sales report as PDF"
+            title="Download complete filtered sales report as PDF"
           >
             {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
@@ -354,87 +529,209 @@ export function SalesList() {
         </div>
       </div>
 
-      <div className="bg-white shadow-sm border border-gray-100 rounded-3xl overflow-hidden flex-1 flex flex-col min-h-0">
-        <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50 flex flex-col md:flex-row md:items-center gap-4 shrink-0">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="bg-white shadow-xs border border-gray-200/80 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-0">
+        {/* Slim KPI Metrics Bar */}
+        <div className="px-6 py-2.5 border-b border-gray-100 bg-gray-50/50 grid grid-cols-3 gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => applyFilters('pending', statusFilter === 'pending' && dateFilter === 'today' ? 'all' : 'today')}
+            className={`flex items-center justify-between px-3.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'pending'
+                ? 'bg-amber-50/80 border-amber-200 text-amber-900 shadow-xs ring-1 ring-amber-300'
+                : 'bg-white border-gray-200/70 text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Awaiting Approver</div>
+              <div className="text-base font-bold text-gray-900 leading-none mt-0.5">{awaitingApproverCount}</div>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-100/80 text-amber-800">
+              {todayPendingCount} today
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyFilters('approver_approved', statusFilter === 'approver_approved' && dateFilter === 'today' ? 'all' : 'today')}
+            className={`flex items-center justify-between px-3.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'approver_approved'
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900 shadow-xs ring-1 ring-emerald-300'
+                : 'bg-white border-gray-200/70 text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ready to Pay</div>
+              <div className="text-base font-bold text-gray-900 leading-none mt-0.5">{readyToPayCount}</div>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800">
+              {todayApprovedCount} today
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyFilters('paid', statusFilter === 'paid' && dateFilter === 'today' ? 'all' : 'today')}
+            className={`flex items-center justify-between px-3.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'paid'
+                ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 shadow-xs ring-1 ring-indigo-300'
+                : 'bg-white border-gray-200/70 text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Paid</div>
+              <div className="text-base font-bold text-gray-900 leading-none mt-0.5">{paidCount}</div>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800">
+              {todayPaidCount} today
+            </span>
+          </button>
+        </div>
+
+        {/* Minimal Unified Filters Toolbar */}
+        <div className="px-6 py-2.5 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+          {/* Left: Search */}
+          <div className="relative w-full md:w-64 shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search sales, promoters, or bill numbers..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-sm"
+              placeholder="Search product, promoter, bill..."
+              className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-gray-200 focus:border-indigo-500 rounded-lg transition-all outline-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                title="Clear"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400 mr-1" />
+
+          {/* Center: Segmented Quick Filters */}
+          <div className="inline-flex items-center p-1 bg-gray-100/90 rounded-xl space-x-1 overflow-x-auto self-start md:self-auto">
+            <button
+              type="button"
+              onClick={() => applyFilters('all', 'all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                isAllSalesActive
+                  ? 'bg-white text-gray-900 shadow-xs font-semibold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              All ({sales.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFilters('approver_approved', 'today')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                isTodayApprovedActive
+                  ? 'bg-white text-emerald-700 shadow-xs font-semibold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Filter to today's approved sales"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isTodayApprovedActive ? 'bg-emerald-500' : 'bg-emerald-400'}`}></span>
+              <span>Today Approved</span>
+              <span className="text-[10px] opacity-75">({todayApprovedCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFilters('pending', 'today')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                isTodayPendingActive
+                  ? 'bg-white text-amber-700 shadow-xs font-semibold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Filter to today's pending sales"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isTodayPendingActive ? 'bg-amber-500' : 'bg-amber-400'}`}></span>
+              <span>Today Pending</span>
+              <span className="text-[10px] opacity-75">({todayPendingCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFilters('paid', 'today')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                isTodayPaidActive
+                  ? 'bg-white text-indigo-700 shadow-xs font-semibold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Filter to today's paid sales"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isTodayPaidActive ? 'bg-indigo-500' : 'bg-indigo-400'}`}></span>
+              <span>Today Paid</span>
+              <span className="text-[10px] opacity-75">({todayPaidCount})</span>
+            </button>
+          </div>
+
+          {/* Right: Date & Status Selects */}
+          <div className="flex items-center space-x-2 self-end md:self-auto shrink-0">
             <select
-              className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={dateFilter}
+              onChange={handleDateChange}
+              className="px-2 py-1.5 text-xs font-medium bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-700 outline-none cursor-pointer"
+            >
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+              <option value="custom">Custom Date...</option>
+            </select>
+
+            {dateFilter === 'custom' && (
+              <input
+                type="date"
+                value={customDate}
+                onChange={handleCustomDateChange}
+                className="px-2 py-1 text-xs border border-indigo-300 rounded-lg text-gray-800 outline-none"
+              />
+            )}
+
+            <select
               value={statusFilter}
               onChange={handleStatusChange}
+              className="px-2 py-1.5 text-xs font-medium bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-700 outline-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
-              <option value="approver_approved">Approved by Approver</option>
+              <option value="approver_approved">Approved</option>
               <option value="paid">Paid</option>
               <option value="rejected">Rejected</option>
             </select>
+
+            {(statusFilter !== 'all' || dateFilter !== 'all' || searchTerm !== '' || customDate !== '') && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                title="Reset filters"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="px-8 py-5 border-b border-gray-50 bg-white shrink-0">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Subtle inline status strip when filtered */}
+        {(statusFilter !== 'all' || dateFilter !== 'all' || searchTerm !== '') && (
+          <div className="px-6 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] text-gray-500 shrink-0">
+            <span>
+              Showing <strong className="text-gray-800 font-semibold">{filteredSales.length}</strong> {filterDesc.toLowerCase()} {searchTerm ? `matching "${searchTerm}"` : ''}
+            </span>
             <button
-              onClick={() => {
-                searchParams.set('status', 'pending');
-                setStatusFilter('pending');
-                setSearchParams(searchParams, { replace: true });
-              }}
-              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
-                statusFilter === 'pending'
-                  ? 'bg-orange-50 border-orange-200 text-orange-800'
-                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
-              }`}
+              type="button"
+              onClick={clearAllFilters}
+              className="text-gray-500 hover:text-gray-800 underline font-medium cursor-pointer"
             >
-              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Awaiting Approver</div>
-              <div className="sales-kpi-count text-2xl font-black mt-1">{awaitingApproverCount}</div>
-            </button>
-            <button
-              onClick={() => {
-                searchParams.set('status', 'approver_approved');
-                setStatusFilter('approver_approved');
-                setSearchParams(searchParams, { replace: true });
-              }}
-              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
-                statusFilter === 'approver_approved'
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Ready to Pay</div>
-              <div className="sales-kpi-count text-2xl font-black mt-1">{readyToPayCount}</div>
-            </button>
-            <button
-              onClick={() => {
-                searchParams.set('status', 'paid');
-                setStatusFilter('paid');
-                setSearchParams(searchParams, { replace: true });
-              }}
-              className={`sales-kpi-button px-4 py-3 rounded-2xl text-left border transition-all ${
-                statusFilter === 'paid'
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
-                  : 'bg-gray-50 border-gray-100 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <div className="sales-kpi-label text-[10px] font-black uppercase tracking-widest opacity-70">Paid</div>
-              <div className="sales-kpi-count text-2xl font-black mt-1">{paidCount}</div>
+              Clear
             </button>
           </div>
-          <p className="mt-3 text-xs text-gray-500 font-medium">
-            Approver handles approvals. Admin should only disburse payments after approver approval.
-          </p>
-        </div>
+        )}
 
         <div className="flex-1 overflow-y-auto">
           <table className="min-w-full divide-y divide-gray-200">

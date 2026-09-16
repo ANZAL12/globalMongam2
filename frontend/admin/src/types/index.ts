@@ -11,6 +11,7 @@ export type Sale = {
   payment_status: 'pending' | 'paid' | 'not_applicable';
   created_at: string;
   paid_at?: string | null;
+  approved_at?: string | null;
   promoter_email?: string;
   approver_name?: string | null;
   promoter?: {

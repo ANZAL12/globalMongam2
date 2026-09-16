@@ -107,6 +107,7 @@ export default function ApproverSaleDetails() {
         .update({
           status,
           approved_by: status === "approver_approved" ? user?.id : null,
+          approved_at: status === "approver_approved" ? new Date().toISOString() : null,
           approver_notes: notes || null,
         })
         .eq("id", id);
