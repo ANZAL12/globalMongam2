@@ -147,7 +147,8 @@ export function SaleDetails() {
               phone_number,
               gpay_number,
               upi_id,
-              approver_id
+              approver_id,
+              shop_name
             ),
             approved_by_user:users!approved_by (
               full_name,
@@ -169,6 +170,8 @@ export function SaleDetails() {
           promoter_phone: data.promoter?.phone_number || 'N/A',
           promoter_gpay: data.promoter?.gpay_number || 'N/A',
           promoter_upi: data.promoter?.upi_id || null,
+          promoter_shop_name: data.promoter?.shop_name || null,
+          shop_name: data.promoter?.shop_name || null,
         };
         
         setSale(mappedResult);
@@ -495,7 +498,10 @@ export function SaleDetails() {
                       </div>
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-0.5">Submitted By</p>
-                        <p className="text-sm font-bold text-gray-900 leading-tight">{sale.promoter_email}</p>
+                        <p className="text-sm font-bold text-gray-900 leading-tight">{sale.promoter_name || sale.promoter_email}</p>
+                        {(sale.shop_name || sale.promoter_shop_name) && (
+                          <p className="text-xs font-semibold text-indigo-600 leading-tight mt-0.5">Shop: {sale.shop_name || sale.promoter_shop_name}</p>
+                        )}
                         <div className="flex flex-col space-y-1 mt-1">
                           <div className="flex items-center text-xs text-gray-500 font-medium">
                             <Phone className="h-3 w-3 mr-1.5 text-gray-400" />

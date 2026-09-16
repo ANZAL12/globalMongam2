@@ -38,6 +38,8 @@ type SalesListItem = Omit<Sale, 'status'> & {
   promoter_phone?: string | null;
   promoter_gpay?: string | null;
   promoter_upi?: string | null;
+  promoter_shop_name?: string | null;
+  shop_name?: string | null;
   approver_name?: string | null;
   has_duplicate_serial?: boolean;
   approved_at?: string | null;
@@ -325,7 +327,8 @@ export function SalesList() {
               email,
               phone_number,
               gpay_number,
-              upi_id
+              upi_id,
+              shop_name
             ),
             approver:users!approved_by (
               full_name,
@@ -352,6 +355,8 @@ export function SalesList() {
           promoter_phone: sale.promoter?.phone_number || null,
           promoter_gpay: sale.promoter?.gpay_number || null,
           promoter_upi: sale.promoter?.upi_id || null,
+          promoter_shop_name: sale.promoter?.shop_name || null,
+          shop_name: sale.promoter?.shop_name || null,
           approver_name: sale.approver?.full_name || sale.approver?.email || null,
           approved_at: sale.approved_at || null,
           paid_at: sale.paid_at || null,
@@ -395,6 +400,8 @@ export function SalesList() {
     const matchesSearch = 
       s.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.promoter_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.promoter_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.shop_name || s.promoter_shop_name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.bill_no?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = 
@@ -769,9 +776,21 @@ export function SalesList() {
                     </div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-600 font-medium">
-                      <User className="h-4 w-4 mr-2 text-gray-400" />
-                      {sale.promoter_email}
+                    <div className="flex flex-col">
+                      <div className="flex items-center text-sm font-semibold text-gray-900">
+                        <User className="h-4 w-4 mr-1.5 text-gray-400 shrink-0" />
+                        <span>{sale.promoter_name || sale.promoter_email}</span>
+                      </div>
+                      {(sale.shop_name || sale.promoter_shop_name) && (
+                        <div className="text-xs font-medium text-indigo-600 pl-5.5">
+                          {sale.shop_name || sale.promoter_shop_name}
+                        </div>
+                      )}
+                      {sale.promoter_name && sale.promoter_email && (
+                        <div className="text-[11px] text-gray-400 pl-5.5">
+                          {sale.promoter_email}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">

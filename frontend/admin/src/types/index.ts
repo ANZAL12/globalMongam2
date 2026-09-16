@@ -28,6 +28,8 @@ export type Sale = {
   bill_image_url?: string | null;
   promoter_name?: string | null;
   promoter_upi?: string | null;
+  promoter_shop_name?: string | null;
+  shop_name?: string | null;
   approver_notes?: string | null;
 };
 

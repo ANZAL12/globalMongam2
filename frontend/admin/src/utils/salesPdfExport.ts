@@ -20,6 +20,8 @@ export interface ExportableSale {
   promoter_phone?: string | null;
   promoter_gpay?: string | null;
   promoter_upi?: string | null;
+  promoter_shop_name?: string | null;
+  shop_name?: string | null;
   approver_name?: string | null;
   approver_notes?: string | null;
   rejection_reason?: string | null;
@@ -434,6 +436,7 @@ export async function generateAllSalesPdfDoc(
   const tableData = sales.map((sale, index) => {
     const promoterText = [
       sale.promoter_name || '',
+      (sale.shop_name || sale.promoter_shop_name) ? `Shop: ${sale.shop_name || sale.promoter_shop_name}` : '',
       sale.promoter_email || '',
       sale.promoter_phone ? `Ph: ${sale.promoter_phone}` : '',
     ].filter(Boolean).join('\n');
@@ -598,6 +601,7 @@ export async function generateAllSalesHtml(
         <td style="font-weight: 600; color: #0f172a;">${sale.bill_no || '-'}</td>
         <td>
           <div style="font-weight: 600; color: #0f172a;">${sale.promoter_name || 'N/A'}</div>
+          ${(sale.shop_name || sale.promoter_shop_name) ? `<div style="font-size: 10px; color: #2563eb; font-weight: 600;">Shop: ${sale.shop_name || sale.promoter_shop_name}</div>` : ''}
           <div style="font-size: 10px; color: #64748b;">${sale.promoter_phone || sale.promoter_email || ''}</div>
         </td>
         <td>
@@ -950,6 +954,7 @@ export async function generateSingleSalePdfDoc(sale: ExportableSale): Promise<js
     head: [['FIELD', 'PROMOTER & BENEFICIARY INFORMATION']],
     body: [
       ['Promoter Full Name', sale.promoter_name || 'N/A'],
+      ['Shop Name', sale.shop_name || sale.promoter_shop_name || 'N/A'],
       ['Promoter Email', sale.promoter_email || 'N/A'],
       ['Phone Number', sale.promoter_phone || 'N/A'],
       ['Google Pay Number', sale.promoter_gpay || 'N/A'],
@@ -1220,6 +1225,7 @@ export async function generateSingleSaleHtml(sale: ExportableSale): Promise<stri
           <div class="card">
             <div class="card-title">Promoter Information</div>
             <div class="row"><span class="label">Name:</span><span class="val">${sale.promoter_name || 'N/A'}</span></div>
+            <div class="row"><span class="label">Shop Name:</span><span class="val">${sale.shop_name || sale.promoter_shop_name || '-'}</span></div>
             <div class="row"><span class="label">Email:</span><span class="val">${sale.promoter_email || 'N/A'}</span></div>
             <div class="row"><span class="label">Phone:</span><span class="val">${sale.promoter_phone || 'N/A'}</span></div>
             <div class="row"><span class="label">Google Pay:</span><span class="val">${sale.promoter_gpay || '-'}</span></div>
@@ -1336,6 +1342,7 @@ export async function generateMultiSaleFullPagesHtml(sales: ExportableSale[]): P
           <div class="card">
             <div class="card-title">Promoter Information</div>
             <div class="row"><span class="label">Name:</span><span class="val">${sale.promoter_name || 'N/A'}</span></div>
+            <div class="row"><span class="label">Shop Name:</span><span class="val">${sale.shop_name || sale.promoter_shop_name || '-'}</span></div>
             <div class="row"><span class="label">Email:</span><span class="val">${sale.promoter_email || 'N/A'}</span></div>
             <div class="row"><span class="label">Phone:</span><span class="val">${sale.promoter_phone || 'N/A'}</span></div>
             <div class="row"><span class="label">Google Pay:</span><span class="val">${sale.promoter_gpay || '-'}</span></div>
