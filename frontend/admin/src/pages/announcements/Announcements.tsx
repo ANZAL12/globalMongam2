@@ -168,9 +168,9 @@ export function Announcements({ targetRole }: AnnouncementPageProps) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
-    formData.append('cloud_name', import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm');
+    formData.append('cloud_name', import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg');
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm'}/image/upload`, {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg'}/image/upload`, {
       method: 'POST',
       body: formData,
     });

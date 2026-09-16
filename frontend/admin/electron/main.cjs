@@ -4,17 +4,23 @@ const path = require('path');
 const { v2: cloudinary } = require('cloudinary');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Configure Cloudinary
+// Configure Cloudinary & Supabase credentials with fallbacks
+const CLOUDINARY_CLOUD_NAME = process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg';
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '621387583956327';
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'msMzoj-o8Jg1BB6tazXm8iYwUeU';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zefsyngtxzqhjnylzlcg.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZnN5bmd0eHpxaGpueWx6bGNnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzkwNjEzNywiZXhwIjoyMDkzNDgyMTM3fQ.eYZXIyqn5PEybB1SNEmQHg2mok-H3b7dxwor0RXdYoQ';
+
 console.log('Cloudinary Config:', {
-  cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm',
-  api_key: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Missing',
-  api_secret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Missing'
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY ? 'Set' : 'Missing',
+  api_secret: CLOUDINARY_API_SECRET ? 'Set' : 'Missing'
 });
 
 cloudinary.config({
-  cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm',
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
 });
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -104,6 +110,14 @@ function createWindow() {
   if (!isDev) {
     Menu.setApplicationMenu(null);
   }
+
+  // Allow toggling DevTools with F12 or Ctrl+Shift+I for troubleshooting
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -323,11 +337,11 @@ function registerCloudinaryHandlers() {
   // Supabase Admin: Create User using Admin API
   ipcMain.handle('supabase:createUser', async (event, data) => {
     try {
-      const supabaseUrl = process.env.VITE_SUPABASE_URL;
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseUrl = SUPABASE_URL;
+      const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
 
       if (!serviceKey || serviceKey === 'your-service-role-key-here') {
-        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in your .env file');
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
       }
 
       console.log(`Creating ${data.role} via Admin API:`, data.email);
