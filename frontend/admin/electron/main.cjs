@@ -1,4 +1,5 @@
-const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const { v2: cloudinary } = require('cloudinary');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -127,6 +128,109 @@ if (!gotTheLock) {
     pendingDeepLinkUrl = getDeepLinkUrl(process.argv);
     registerCloudinaryHandlers();
     createWindow();
+    setupAutoUpdater();
+  });
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) {
+    console.log('[AutoUpdater] Skipped: running in development mode.');
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  console.log('[AutoUpdater] Initializing auto-updater for GitHub repository...');
+
+  // Check for updates 5 seconds after startup so it does not block initial load
+  setTimeout(() => {
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.error('[AutoUpdater] Initial check error:', err?.message || err);
+    });
+  }, 5000);
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[AutoUpdater] Checking for updates...');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { status: 'checking' });
+    }
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Update available:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { status: 'available', version: info.version });
+    }
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[AutoUpdater] Update not available. Current version is latest:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { status: 'up-to-date', version: info.version });
+    }
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    const percent = Math.round(progressObj.percent);
+    console.log(`[AutoUpdater] Download progress: ${percent}%`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', {
+        status: 'downloading',
+        percent,
+        bytesPerSecond: progressObj.bytesPerSecond,
+        total: progressObj.total,
+        transferred: progressObj.transferred
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Update downloaded successfully:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { status: 'downloaded', version: info.version });
+    }
+
+    dialog
+      .showMessageBox({
+        type: 'info',
+        title: 'Update Ready to Install',
+        message: `Version ${info.version} of Admin Dashboard has been downloaded.`,
+        detail: 'Would you like to restart the application now to install the update?',
+        buttons: ['Restart and Update', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          setImmediate(() => {
+            autoUpdater.quitAndInstall(false, true);
+          });
+        }
+      });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater] Error:', err == null ? 'unknown' : (err.stack || err).toString());
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { status: 'error', error: err?.message || String(err) });
+    }
+  });
+
+  ipcMain.handle('updater:check', async () => {
+    if (!app.isPackaged) {
+      return { success: false, message: 'Updates are only checked in production builds.' };
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { success: true, result };
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('updater:quitAndInstall', () => {
+    autoUpdater.quitAndInstall(false, true);
   });
 }
 

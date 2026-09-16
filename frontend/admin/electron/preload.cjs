@@ -35,6 +35,16 @@ contextBridge.exposeInMainWorld(
     // System utility bridge (open PDF in OS default viewer with full preview)
     system: {
       openPdf: (data) => ipcRenderer.invoke('system:openPdf', data),
+    },
+    // Auto-updater bridge
+    updater: {
+      checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+      quitAndInstall: () => ipcRenderer.invoke('updater:quitAndInstall'),
+      onStatus: (callback) => {
+        const handler = (_event, status) => callback(status);
+        ipcRenderer.on('updater:status', handler);
+        return () => ipcRenderer.removeListener('updater:status', handler);
+      }
     }
   }
 );
