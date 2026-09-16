@@ -6,7 +6,6 @@ import {
   Search, 
   Filter, 
   TrendingUp, 
-  Medal, 
   ChevronRight,
   User,
   ShieldCheck,
