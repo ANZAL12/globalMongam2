@@ -199,7 +199,7 @@ export default function AdminAnnouncements() {
                 } as any);
 
                 const uploadPreset = (process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default').trim();
-                const cloudName = (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dy8s5kclm').trim();
+                const cloudName = (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg').trim();
 
                 formData.append('upload_preset', uploadPreset);
                 formData.append('cloud_name', cloudName);

@@ -165,18 +165,21 @@ export function Announcements({ targetRole }: AnnouncementPageProps) {
   };
 
   const uploadImage = async (file: File) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg';
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
-    formData.append('cloud_name', import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg');
+    formData.append('upload_preset', uploadPreset);
+    formData.append('cloud_name', cloudName);
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg'}/image/upload`, {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: 'POST',
       body: formData,
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) throw new Error(data.error.message || 'Image upload failed');
 
     return data.secure_url;
   };
@@ -301,11 +304,11 @@ export function Announcements({ targetRole }: AnnouncementPageProps) {
         message: editingId ? 'The announcement has been updated successfully.' : 'Your new announcement is now live.',
         severity: 'success'
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Submit failed:', err);
       showAlert({
         title: 'Action Failed',
-        message: 'Failed to save the announcement. Please try again.',
+        message: err?.message || 'Failed to save the announcement. Please try again.',
         severity: 'error'
       });
     } finally {
