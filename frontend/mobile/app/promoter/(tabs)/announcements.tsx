@@ -135,7 +135,17 @@ export default function Announcements() {
                 renderItem={({ item }) => (
                     <TouchableOpacity 
                         style={styles.card} 
-                        onPress={() => router.push(`/promoter/details/${item.id}`)}
+                        onPress={() =>
+                            router.push({
+                                pathname: `/promoter/details/${item.id}`,
+                                params: {
+                                    initialTitle: item.title,
+                                    initialDescription: item.description,
+                                    initialImageUrl: item.image_url || '',
+                                    initialDate: item.created_at,
+                                },
+                            } as any)
+                        }
                         activeOpacity={0.7}
                     >
                         <Text style={styles.title}>{item.title}</Text>

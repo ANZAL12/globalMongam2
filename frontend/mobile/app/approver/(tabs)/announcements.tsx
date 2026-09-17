@@ -102,8 +102,18 @@ export default function ApproverAnnouncements() {
                 renderItem={({ item }) => (
                     <TouchableOpacity
                         style={styles.card}
-                        onPress={() => router.push(`/approver/details/${item.id}` as any)}
                         activeOpacity={0.7}
+                        onPress={() =>
+                            router.push({
+                                pathname: `/approver/details/${item.id}`,
+                                params: {
+                                    initialTitle: item.title,
+                                    initialDescription: item.description,
+                                    initialImageUrl: item.image_url || '',
+                                    initialDate: item.created_at,
+                                },
+                            } as any)
+                        }
                     >
                         <Text style={styles.title}>{item.title}</Text>
                         <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
