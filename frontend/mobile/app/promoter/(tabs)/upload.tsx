@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView, Modal, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView, Modal, TouchableOpacity, Vibration } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../services/supabase";
@@ -45,6 +46,15 @@ export default function UploadSale() {
     const handleBarcodeScanned = ({ data }: { data: string }) => {
         if (isScanned) return;
         setIsScanned(true);
+
+        // Mobile Vibration and Haptic Feedback
+        try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (e) {}
+        try {
+            Vibration.vibrate(150);
+        } catch (e) {}
+
         if (data) {
             setSerialNo(data.trim());
         }

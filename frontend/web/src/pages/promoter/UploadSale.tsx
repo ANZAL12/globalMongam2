@@ -36,6 +36,11 @@ export default function PromoterUploadSale() {
                     },
                     (decodedText) => {
                         if (decodedText && isMounted) {
+                            try {
+                                if ('vibrate' in navigator) {
+                                    navigator.vibrate(150);
+                                }
+                            } catch (e) {}
                             setSerialNo(decodedText.trim());
                             if (html5QrCode?.isScanning) {
                                 html5QrCode.stop().then(() => {
