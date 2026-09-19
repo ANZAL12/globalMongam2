@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
 import ZoomableImageModal from "../../../../components/ZoomableImageModal";
@@ -31,7 +31,6 @@ export default function AnnouncementDetails() {
     initialDate?: string;
   }>();
   const id = params.id ? String(params.id) : undefined;
-  const router = useRouter();
 
   const [announcement, setAnnouncement] = useState<Announcement | null>(() => {
     if (id && (params.initialTitle || params.initialImageUrl)) {
@@ -87,16 +86,6 @@ export default function AnnouncementDetails() {
   if (loading && !announcement) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#1976d2" />
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-        </View>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#1976d2" />
         </View>
@@ -107,16 +96,6 @@ export default function AnnouncementDetails() {
   if (!announcement) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#1976d2" />
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-        </View>
         <View style={styles.center}>
           <Text style={styles.notFoundText}>Announcement not found.</Text>
         </View>
@@ -126,20 +105,6 @@ export default function AnnouncementDetails() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#1976d2" />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Announcement Details
-        </Text>
-      </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
