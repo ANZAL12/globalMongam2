@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
+import { ScanBarcode, X } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PromoterUploadSale() {
     const navigate = useNavigate();
@@ -12,6 +14,63 @@ export default function PromoterUploadSale() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scannerError, setScannerError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isScanning) return;
+
+        let html5QrCode: Html5Qrcode | null = null;
+        let isMounted = true;
+
+        const startScanner = async () => {
+            try {
+                setScannerError(null);
+                html5QrCode = new Html5Qrcode("web-barcode-reader");
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 280, height: 160 },
+                        aspectRatio: 1.0,
+                    },
+                    (decodedText) => {
+                        if (decodedText && isMounted) {
+                            setSerialNo(decodedText.trim());
+                            if (html5QrCode?.isScanning) {
+                                html5QrCode.stop().then(() => {
+                                    html5QrCode?.clear();
+                                    if (isMounted) setIsScanning(false);
+                                }).catch(() => {
+                                    if (isMounted) setIsScanning(false);
+                                });
+                            } else {
+                                if (isMounted) setIsScanning(false);
+                            }
+                        }
+                    },
+                    () => {}
+                );
+            } catch (err: any) {
+                console.error("Barcode scanner initialization error:", err);
+                if (isMounted) {
+                    setScannerError(err?.message || "Could not access camera. Please allow camera permissions in your browser.");
+                }
+            }
+        };
+
+        const timer = setTimeout(startScanner, 150);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+            if (html5QrCode?.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode?.clear();
+                }).catch(console.error);
+            }
+        };
+    }, [isScanning]);
 
     // Use an invisible file input triggered by buttons
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -153,14 +212,35 @@ export default function PromoterUploadSale() {
                     className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
                 />
 
-                <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Serial No *</label>
-                <input
-                    type="text"
-                    value={serialNo}
-                    onChange={(e) => setSerialNo(e.target.value)}
-                    placeholder="e.g. RZ8T123456"
-                    className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
-                />
+                <div className="flex items-center justify-between mb-[8px]">
+                    <label className="text-[16px] font-[600] text-[#333]">Serial No *</label>
+                    <button
+                        type="button"
+                        onClick={() => setIsScanning(true)}
+                        className="flex items-center gap-1.5 text-[14px] font-[500] text-[#1976d2] hover:text-[#115293] cursor-pointer"
+                        title="Scan barcode with camera"
+                    >
+                        <ScanBarcode className="w-4 h-4" />
+                        <span>Scan Barcode</span>
+                    </button>
+                </div>
+                <div className="relative mb-[20px]">
+                    <input
+                        type="text"
+                        value={serialNo}
+                        onChange={(e) => setSerialNo(e.target.value)}
+                        placeholder="e.g. RZ8T123456"
+                        className="w-full border border-[#ccc] rounded-[8px] p-[12px] pr-[44px] text-[16px] bg-[#fafafa] outline-none focus:border-[#1976d2] transition-colors"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setIsScanning(true)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#1976d2] hover:text-[#115293] p-2 cursor-pointer transition-colors"
+                        title="Scan barcode"
+                    >
+                        <ScanBarcode className="w-5 h-5" />
+                    </button>
+                </div>
 
                 <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Bill No *</label>
                 <input
@@ -187,10 +267,10 @@ export default function PromoterUploadSale() {
                         <img
                             src={imagePreview}
                             alt="Bill preview"
-                            className="w-[200px] h-[200px] rounded-[8px] mb-[10px] object-cover"
+                            className="w-[200px] h-[200px] object-cover rounded-[8px] mb-[10px]"
                         />
                     ) : (
-                        <div className="w-[200px] h-[200px] border border-[#ccc] border-dashed rounded-[8px] flex justify-center items-center mb-[10px] bg-[#fafafa]">
+                        <div className="w-[200px] h-[200px] border border-[#ccc] border-dashed rounded-[8px] flex items-center justify-center mb-[10px]">
                             <span className="text-[#888]">No image selected</span>
                         </div>
                     )}
@@ -204,18 +284,18 @@ export default function PromoterUploadSale() {
                         className="hidden"
                     />
 
-                    <div className="flex flex-row justify-center w-full gap-[20px] mt-[10px]">
+                    <div className="flex justify-center w-full gap-[20px]">
                         <button
                             type="button"
                             onClick={triggerFileInput}
-                            className="bg-transparent border-none text-[#1976d2] font-[500] uppercase tracking-wide hover:bg-blue-50 px-[15px] py-[8px] rounded transition-colors"
+                            className="bg-[#2196f3] hover:bg-[#1e88e5] active:bg-[#1976d2] text-white font-[500] px-[16px] py-[8px] rounded-[4px] uppercase text-[14px] transition-colors shadow-sm cursor-pointer"
                         >
                             CHOOSE IMAGE
                         </button>
                         <button
                             type="button"
                             onClick={triggerCamera}
-                            className="bg-transparent border-none text-[#1976d2] font-[500] uppercase tracking-wide hover:bg-blue-50 px-[15px] py-[8px] rounded transition-colors"
+                            className="bg-[#1976d2] hover:bg-[#1565c0] active:bg-[#0d47a1] text-white font-[500] px-[16px] py-[8px] rounded-[4px] uppercase text-[14px] transition-colors shadow-sm cursor-pointer"
                         >
                             TAKE PHOTO
                         </button>
@@ -237,6 +317,52 @@ export default function PromoterUploadSale() {
                     )}
                 </div>
             </form>
+
+            {/* Barcode Scanner Modal for Web */}
+            {isScanning && (
+                <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative flex flex-col items-center">
+                        <div className="w-full flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                            <div className="flex items-center gap-2 text-gray-800">
+                                <ScanBarcode className="w-5 h-5 text-[#1976d2]" />
+                                <h3 className="font-semibold text-lg">Scan Serial Barcode</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsScanning(false)}
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {scannerError ? (
+                            <div className="w-full p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4 text-center">
+                                <p className="font-semibold mb-1">Camera Error</p>
+                                <p>{scannerError}</p>
+                            </div>
+                        ) : (
+                            <div className="w-full flex flex-col items-center">
+                                <div
+                                    id="web-barcode-reader"
+                                    className="w-full max-w-[340px] aspect-square rounded-lg overflow-hidden bg-black shadow-inner"
+                                />
+                                <p className="text-xs text-gray-500 mt-3 text-center">
+                                    Point your camera at the barcode or QR code. The serial number will be read automatically.
+                                </p>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => setIsScanning(false)}
+                            className="mt-5 w-full py-2.5 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

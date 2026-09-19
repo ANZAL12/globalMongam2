@@ -4,10 +4,13 @@ import { GoogleSignInProvider } from "../context/GoogleSignInProvider";
 import { useEffect, useState } from "react";
 import { View, ActivityIndicator, AppState } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { requestAllPermissions, syncPushTokenToBackend } from "../services/notifications";
+import { requestAllPermissions, syncPushTokenToBackend, isExpoGo } from "../services/notifications";
 import { supabase } from "../services/supabase";
-import * as Notifications from 'expo-notifications';
+const Notifications: typeof import('expo-notifications') | null = !isExpoGo
+  ? require('expo-notifications')
+  : null;
 import * as WebBrowser from "expo-web-browser";
+import { useSilentAutoUpdate } from "../hooks/useSilentAutoUpdate";
 
 WebBrowser.maybeCompleteAuthSession();
 const ALLOWED_ROLES = new Set(["admin", "promoter", "approver"]);
@@ -19,6 +22,7 @@ type NotificationRouteData = {
 };
 
 function RootLayoutNav() {
+  useSilentAutoUpdate();
   const { isAuthenticated, isLoading, role, mustChangePassword, logout } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -61,6 +65,7 @@ function RootLayoutNav() {
   }, [isAuthenticated, role]);
 
   useEffect(() => {
+    if (!Notifications) return;
     // Listener for notifications received while the app is foregrounded
     const subscription = Notifications.addNotificationReceivedListener(notification => {
       console.log('🔔 Notification Received in Foreground:', notification);
@@ -112,17 +117,19 @@ function RootLayoutNav() {
                 .eq('id', announcementId)
                 .single();
 
-              await Notifications.scheduleNotificationAsync({
-                content: {
-                  title: announcement?.title || 'New announcement',
-                  body: (announcement?.description || 'You have a new announcement.').slice(0, 100),
-                  data: {
-                    type: 'announcement',
-                    announcement_id: announcementId,
+              if (Notifications) {
+                await Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: announcement?.title || 'New announcement',
+                    body: (announcement?.description || 'You have a new announcement.').slice(0, 100),
+                    data: {
+                      type: 'announcement',
+                      announcement_id: announcementId,
+                    },
                   },
-                },
-                trigger: null,
-              });
+                  trigger: null,
+                });
+              }
             } catch (error) {
               console.error('Realtime local announcement notification failed:', error);
             }
@@ -144,6 +151,7 @@ function RootLayoutNav() {
   }, [isAuthenticated, role]);
 
   useEffect(() => {
+    if (!Notifications) return;
     const clearBadge = async () => {
       try {
         await Notifications.setBadgeCountAsync(0);

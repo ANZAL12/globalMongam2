@@ -1,29 +1,45 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import * as ImagePicker from 'expo-image-picker';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { supabase } from './supabase';
 
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-    }),
-});
+export const isExpoGo =
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    Constants.appOwnership === 'expo';
+
+// Only load expo-notifications in standalone/custom builds (crashes in Expo Go by design in SDK 53+)
+const Notifications: typeof import('expo-notifications') | null = !isExpoGo
+    ? require('expo-notifications')
+    : null;
+
+if (Notifications) {
+    try {
+        Notifications.setNotificationHandler({
+            handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: true,
+                shouldShowBanner: true,
+                shouldShowList: true,
+            }),
+        });
+    } catch (e) {
+        console.warn('Could not set notification handler:', e);
+    }
+}
 
 /**
  * Requests all necessary permissions for the app on startup.
  */
 export async function requestAllPermissions() {
     try {
-        // 1. Push Notifications
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        if (existingStatus !== 'granted') {
-            await Notifications.requestPermissionsAsync();
+        // 1. Push Notifications (Skipped in Expo Go)
+        if (Notifications) {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            if (existingStatus !== 'granted') {
+                await Notifications.requestPermissionsAsync();
+            }
         }
 
         // 2. Camera
@@ -45,6 +61,11 @@ export async function requestAllPermissions() {
 }
 
 export async function registerForPushNotificationsAsync() {
+    if (!Notifications || isExpoGo) {
+        console.log('Push: Skipped in Expo Go (Push notifications require standalone APK / dev build)');
+        return null;
+    }
+
     let token;
 
     if (Platform.OS === 'android') {
@@ -91,8 +112,8 @@ export async function registerForPushNotificationsAsync() {
 }
 
 export async function registerForFirebasePushTokenAsync() {
-    if (!Device.isDevice) {
-        console.warn('FCM: SKIPPED (Not a physical device)');
+    if (!Notifications || isExpoGo || !Device.isDevice) {
+        if (!isExpoGo) console.warn('FCM: SKIPPED (Not a physical device)');
         return null;
     }
 
@@ -125,6 +146,9 @@ export async function registerForFirebasePushTokenAsync() {
 }
 
 export const syncPushTokenToBackend = async () => {
+    if (isExpoGo) {
+        return;
+    }
     try {
         console.log('Push Sync: Checking authentication...');
         const { data: { user } } = await supabase.auth.getUser();

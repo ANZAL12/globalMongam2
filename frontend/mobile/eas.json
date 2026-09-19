@@ -10,6 +10,7 @@
         },
         "preview": {
             "distribution": "internal",
+            "channel": "preview",
             "env": {
                 "EXPO_PUBLIC_API_URL": "https://global-agencies-backend.onrender.com/api",
                 "EXPO_PUBLIC_SUPABASE_URL": "https://zefsyngtxzqhjnylzlcg.supabase.co",
@@ -19,6 +20,7 @@
             }
         },
         "production": {
+            "channel": "production",
             "env": {
                 "EXPO_PUBLIC_API_URL": "https://global-agencies-backend.onrender.com/api",
                 "EXPO_PUBLIC_SUPABASE_URL": "https://zefsyngtxzqhjnylzlcg.supabase.co",
@@ -29,6 +31,7 @@
         },
         "apk": {
             "extends": "production",
+            "channel": "production",
             "android": {
                 "buildType": "apk"
             }

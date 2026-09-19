@@ -38,6 +38,7 @@ export default function AdminAnnouncements() {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [imageUri, setImageUri] = useState<string | null>(null);
+    const [imageBase64, setImageBase64] = useState<string | null>(null);
     const [targetPromoters, setTargetPromoters] = useState<string[]>([]);
     const [promoters, setPromoters] = useState<Promoter[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -167,10 +168,12 @@ export default function AdminAnnouncements() {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: 'images',
             quality: 0.8,
+            base64: true,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             setImageUri(result.assets[0].uri);
+            setImageBase64(result.assets[0].base64 || null);
         }
     };
 
@@ -185,28 +188,37 @@ export default function AdminAnnouncements() {
             let uploadedImageUrl = null;
 
             if (imageUri) {
-                // Upload to Cloudinary using React Native FormData's special file object
-                const formData = new FormData();
-                
                 const filename = imageUri.split('/').pop() || 'upload.jpg';
                 const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image/jpeg`;
+                const mimeType = match ? `image/${match[1].toLowerCase()}` : `image/jpeg`;
 
-                formData.append('file', {
-                    uri: imageUri,
-                    name: filename,
-                    type: type,
-                } as any);
+                let base64Data = imageBase64;
+                if (!base64Data) {
+                    const blobRes = await fetch(imageUri);
+                    const blob = await blobRes.blob();
+                    base64Data = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const res = reader.result as string;
+                            resolve(res.includes(',') ? res.split(',')[1] : res);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                }
 
                 const uploadPreset = (process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default').trim();
                 const cloudName = (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dd1kxaadg').trim();
 
-                formData.append('upload_preset', uploadPreset);
-                formData.append('cloud_name', cloudName);
-
                 const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                     method: 'POST',
-                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file: `data:${mimeType};base64,${base64Data}`,
+                        upload_preset: uploadPreset,
+                    }),
                 });
 
                 const uploadData = await response.json();
