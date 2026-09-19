@@ -1,10 +1,126 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView, Modal, TouchableOpacity } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../services/supabase";
 import { useRouter } from "expo-router";
+
+// Barcode scanner is controlled via EXPO_PUBLIC_ENABLE_BARCODE_SCANNER ('on' or 'off')
+const isBarcodeScannerEnabled = (
+    process.env.EXPO_PUBLIC_ENABLE_BARCODE_SCANNER === "on" ||
+    process.env.EXPO_PUBLIC_ENABLE_BARCODE_SCANNER === "true"
+);
+
+let ExpoCameraModule: any = null;
+if (isBarcodeScannerEnabled) {
+    try {
+        ExpoCameraModule = require("expo-camera");
+    } catch (e) {
+        console.warn("expo-camera module is not available in this APK binary", e);
+    }
+}
+
+function BarcodeScannerModal({
+    visible,
+    onClose,
+    onBarcodeScanned,
+}: {
+    visible: boolean;
+    onClose: () => void;
+    onBarcodeScanned: (data: string) => void;
+}) {
+    if (!isBarcodeScannerEnabled || !ExpoCameraModule?.CameraView) {
+        return null;
+    }
+
+    const CameraView = ExpoCameraModule.CameraView;
+    const useCameraPermissions = ExpoCameraModule.useCameraPermissions;
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isScanned, setIsScanned] = useState(false);
+
+    useEffect(() => {
+        if (visible && !permission?.granted && requestPermission) {
+            requestPermission();
+        }
+    }, [visible, permission]);
+
+    const handleScanned = ({ data }: { data: string }) => {
+        if (isScanned) return;
+        setIsScanned(true);
+        if (data) {
+            onBarcodeScanned(data);
+        }
+    };
+
+    return (
+        <Modal
+            visible={visible}
+            animationType="slide"
+            onRequestClose={onClose}
+        >
+            <View style={styles.scannerModalContainer}>
+                <CameraView
+                    style={StyleSheet.absoluteFill}
+                    facing="back"
+                    barcodeScannerSettings={{
+                        barcodeTypes: [
+                            'qr',
+                            'code128',
+                            'code39',
+                            'code93',
+                            'codabar',
+                            'ean13',
+                            'ean8',
+                            'upc_a',
+                            'upc_e',
+                            'itf14',
+                            'pdf417',
+                            'aztec',
+                            'datamatrix',
+                        ],
+                    }}
+                    onBarcodeScanned={isScanned ? undefined : handleScanned}
+                />
+
+                <View style={styles.scannerOverlay}>
+                    <View style={styles.scannerHeader}>
+                        <TouchableOpacity
+                            style={styles.scannerCloseButton}
+                            onPress={onClose}
+                        >
+                            <Ionicons name="close" size={28} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.scannerHeaderTitle}>Scan Serial Barcode</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    <View style={styles.scannerFrameContainer}>
+                        <View style={styles.scannerTargetBox}>
+                            <View style={[styles.boxCorner, styles.cornerTopLeft]} />
+                            <View style={[styles.boxCorner, styles.cornerTopRight]} />
+                            <View style={[styles.boxCorner, styles.cornerBottomLeft]} />
+                            <View style={[styles.boxCorner, styles.cornerBottomRight]} />
+                            <View style={styles.scanLaser} />
+                        </View>
+                        <Text style={styles.scannerInstructions}>
+                            Center barcode or QR code inside the box to scan automatically
+                        </Text>
+                    </View>
+
+                    <View style={styles.scannerFooter}>
+                        <TouchableOpacity
+                            style={styles.scannerCancelButton}
+                            onPress={onClose}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.scannerCancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+}
 
 export default function UploadSale() {
     const router = useRouter();
@@ -17,24 +133,16 @@ export default function UploadSale() {
     const [imageBase64, setImageBase64] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [isScanned, setIsScanned] = useState(false);
-    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-    const startScanning = async () => {
-        if (!cameraPermission?.granted) {
-            const result = await requestCameraPermission();
-            if (!result.granted) {
-                Alert.alert("Camera Permission Required", "Please allow camera access in your device settings to scan barcodes.");
-                return;
-            }
+    const startScanning = () => {
+        if (!isBarcodeScannerEnabled) {
+            Alert.alert("Feature Disabled", "Barcode scanner is currently disabled in app settings.");
+            return;
         }
-        setIsScanned(false);
         setIsScanning(true);
     };
 
-    const handleBarcodeScanned = ({ data }: { data: string }) => {
-        if (isScanned) return;
-        setIsScanned(true);
+    const handleBarcodeScanned = (data: string) => {
         if (data) {
             setSerialNo(data.trim());
         }
@@ -226,34 +334,49 @@ export default function UploadSale() {
                 onChangeText={setModelNo}
             />
 
-            <View style={styles.labelRow}>
-                <Text style={styles.label}>Serial No *</Text>
-                <TouchableOpacity
-                    style={styles.scanBadgeButton}
-                    onPress={startScanning}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="barcode-outline" size={18} color="#1976d2" />
-                    <Text style={styles.scanBadgeText}>Scan Barcode</Text>
-                </TouchableOpacity>
-            </View>
-            <View style={styles.inputWithIconContainer}>
-                <TextInput
-                    style={styles.inputWithIcon}
-                    placeholder="e.g. RZ8T123456"
-                    placeholderTextColor="#999"
-                    value={serialNo}
-                    onChangeText={setSerialNo}
-                />
-                <TouchableOpacity
-                    style={styles.inputTrailingIcon}
-                    onPress={startScanning}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                    <Ionicons name="scan" size={22} color="#1976d2" />
-                </TouchableOpacity>
-            </View>
+            {isBarcodeScannerEnabled ? (
+                <>
+                    <View style={styles.labelRow}>
+                        <Text style={styles.label}>Serial No *</Text>
+                        <TouchableOpacity
+                            style={styles.scanBadgeButton}
+                            onPress={startScanning}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="barcode-outline" size={18} color="#1976d2" />
+                            <Text style={styles.scanBadgeText}>Scan Barcode</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.inputWithIconContainer}>
+                        <TextInput
+                            style={styles.inputWithIcon}
+                            placeholder="e.g. RZ8T123456"
+                            placeholderTextColor="#999"
+                            value={serialNo}
+                            onChangeText={setSerialNo}
+                        />
+                        <TouchableOpacity
+                            style={styles.inputTrailingIcon}
+                            onPress={startScanning}
+                            activeOpacity={0.7}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons name="scan" size={22} color="#1976d2" />
+                        </TouchableOpacity>
+                    </View>
+                </>
+            ) : (
+                <>
+                    <Text style={styles.label}>Serial No *</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="e.g. RZ8T123456"
+                        placeholderTextColor="#999"
+                        value={serialNo}
+                        onChangeText={setSerialNo}
+                    />
+                </>
+            )}
 
             <Text style={styles.label}>Bill No *</Text>
             <TextInput
@@ -302,73 +425,14 @@ export default function UploadSale() {
             </View>
         </ScrollView>
 
-        {/* Barcode Scanner Modal for Mobile */}
-        <Modal
-            visible={isScanning}
-            animationType="slide"
-            onRequestClose={() => setIsScanning(false)}
-        >
-            <View style={styles.scannerModalContainer}>
-                <CameraView
-                    style={StyleSheet.absoluteFill}
-                    facing="back"
-                    barcodeScannerSettings={{
-                        barcodeTypes: [
-                            'qr',
-                            'code128',
-                            'code39',
-                            'code93',
-                            'codabar',
-                            'ean13',
-                            'ean8',
-                            'upc_a',
-                            'upc_e',
-                            'itf14',
-                            'pdf417',
-                            'aztec',
-                            'datamatrix',
-                        ],
-                    }}
-                    onBarcodeScanned={isScanned ? undefined : handleBarcodeScanned}
-                />
-
-                <View style={styles.scannerOverlay}>
-                    <View style={styles.scannerHeader}>
-                        <TouchableOpacity
-                            style={styles.scannerCloseButton}
-                            onPress={() => setIsScanning(false)}
-                        >
-                            <Ionicons name="close" size={28} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.scannerHeaderTitle}>Scan Serial Barcode</Text>
-                        <View style={{ width: 40 }} />
-                    </View>
-
-                    <View style={styles.scannerFrameContainer}>
-                        <View style={styles.scannerTargetBox}>
-                            <View style={[styles.boxCorner, styles.cornerTopLeft]} />
-                            <View style={[styles.boxCorner, styles.cornerTopRight]} />
-                            <View style={[styles.boxCorner, styles.cornerBottomLeft]} />
-                            <View style={[styles.boxCorner, styles.cornerBottomRight]} />
-                            <View style={styles.scanLaser} />
-                        </View>
-                        <Text style={styles.scannerInstructions}>
-                            Center barcode or QR code inside the box to scan automatically
-                        </Text>
-                    </View>
-
-                    <View style={styles.scannerFooter}>
-                        <TouchableOpacity
-                            style={styles.scannerCancelButton}
-                            onPress={() => setIsScanning(false)}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.scannerCancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
-        </Modal>
+        {/* Barcode Scanner Modal (only rendered when enabled) */}
+        {isBarcodeScannerEnabled && (
+            <BarcodeScannerModal
+                visible={isScanning}
+                onClose={() => setIsScanning(false)}
+                onBarcodeScanned={handleBarcodeScanned}
+            />
+        )}
     </>
 );
 }
