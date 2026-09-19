@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Image, Alert, ActivityIndicator, Platform, ScrollView, Modal, TouchableOpacity, Vibration } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, scanFromURLAsync } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../services/supabase";
 import { useRouter } from "expo-router";
@@ -59,6 +59,59 @@ export default function UploadSale() {
             setSerialNo(data.trim());
         }
         setIsScanning(false);
+    };
+
+    const pickBarcodeFromGallery = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (permissionResult.granted === false) {
+                Alert.alert("Permission Required", "Please allow photo library access to scan barcodes from images.");
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'images',
+                quality: 1,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const pickedUri = result.assets[0].uri;
+                const scannedResults = await scanFromURLAsync(pickedUri, [
+                    'qr',
+                    'code128',
+                    'code39',
+                    'code93',
+                    'codabar',
+                    'ean13',
+                    'ean8',
+                    'upc_a',
+                    'upc_e',
+                    'itf14',
+                    'pdf417',
+                    'aztec',
+                    'datamatrix',
+                ]);
+
+                if (scannedResults && scannedResults.length > 0 && scannedResults[0].data) {
+                    try {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    } catch (e) {}
+                    try {
+                        Vibration.vibrate(150);
+                    } catch (e) {}
+                    setSerialNo(scannedResults[0].data.trim());
+                    setIsScanning(false);
+                } else {
+                    Alert.alert(
+                        "No Barcode Detected",
+                        "We couldn't detect a barcode in this photo. Please ensure the barcode is clearly visible, or scan directly with the camera."
+                    );
+                }
+            }
+        } catch (error: any) {
+            console.error("Failed to scan barcode from gallery image", error);
+            Alert.alert("Scan Failed", "Could not scan the image. Please try another image or use the camera.");
+        }
     };
 
     const pickImage = async () => {
@@ -377,7 +430,13 @@ export default function UploadSale() {
                                 <Ionicons name="close" size={28} color="#fff" />
                             </TouchableOpacity>
                             <Text style={styles.scannerHeaderTitle}>Scan Serial Barcode</Text>
-                            <View style={{ width: 40 }} />
+                            <TouchableOpacity
+                                style={styles.scannerGalleryButton}
+                                onPress={pickBarcodeFromGallery}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="images" size={22} color="#fff" />
+                            </TouchableOpacity>
                         </View>
 
                     <View style={styles.scannerFrameContainer}>
@@ -389,11 +448,19 @@ export default function UploadSale() {
                             <View style={styles.scanLaser} />
                         </View>
                         <Text style={styles.scannerInstructions}>
-                            Center barcode or QR code inside the box to scan automatically
+                            Center barcode or QR code inside the box, or tap below to upload from gallery
                         </Text>
                     </View>
 
                     <View style={styles.scannerFooter}>
+                        <TouchableOpacity
+                            style={styles.galleryActionButton}
+                            onPress={pickBarcodeFromGallery}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="image-outline" size={20} color="#fff" />
+                            <Text style={styles.galleryActionButtonText}>Upload from Gallery</Text>
+                        </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.scannerCancelButton}
                             onPress={() => setIsScanning(false)}
@@ -614,6 +681,29 @@ const styles = StyleSheet.create({
     scannerCancelButtonText: {
         color: "#fff",
         fontSize: 16,
+        fontWeight: "600",
+    },
+    scannerGalleryButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    galleryActionButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#1976d2",
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 24,
+        gap: 8,
+        marginBottom: 12,
+    },
+    galleryActionButtonText: {
+        color: "#fff",
+        fontSize: 15,
         fontWeight: "600",
     },
 });

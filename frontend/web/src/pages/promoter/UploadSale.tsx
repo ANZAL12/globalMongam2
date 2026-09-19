@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
-import { ScanBarcode, X } from 'lucide-react';
+import { ScanBarcode, X, Image as ImageIcon } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PromoterUploadSale() {
@@ -15,7 +15,33 @@ export default function PromoterUploadSale() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [isProcessingGalleryImage, setIsProcessingGalleryImage] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
+    const galleryFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleGalleryBarcodeScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !e.target.files[0]) return;
+        const file = e.target.files[0];
+        setIsProcessingGalleryImage(true);
+        try {
+            const html5QrCode = new Html5Qrcode("web-barcode-reader-file-temp");
+            const decodedText = await html5QrCode.scanFile(file, false);
+            if (decodedText) {
+                try {
+                    if ('vibrate' in navigator) navigator.vibrate(150);
+                } catch (err) {}
+                setSerialNo(decodedText.trim());
+                setIsScanning(false);
+            }
+        } catch (err) {
+            alert("No barcode detected in the selected image. Please choose a clearer picture or scan using the camera.");
+        } finally {
+            setIsProcessingGalleryImage(false);
+            if (galleryFileInputRef.current) {
+                galleryFileInputRef.current.value = '';
+            }
+        }
+    };
 
     useEffect(() => {
         if (!isScanning) return;
@@ -332,13 +358,25 @@ export default function PromoterUploadSale() {
                                 <ScanBarcode className="w-5 h-5 text-[#1976d2]" />
                                 <h3 className="font-semibold text-lg">Scan Serial Barcode</h3>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsScanning(false)}
-                                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => galleryFileInputRef.current?.click()}
+                                    disabled={isProcessingGalleryImage}
+                                    className="p-1.5 text-gray-600 hover:text-[#1976d2] rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1 text-xs font-medium cursor-pointer"
+                                    title="Upload barcode image from gallery"
+                                >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>Gallery</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsScanning(false)}
+                                    className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
 
                         {scannerError ? (
@@ -353,15 +391,34 @@ export default function PromoterUploadSale() {
                                     className="w-full max-w-[340px] aspect-square rounded-lg overflow-hidden bg-black shadow-inner"
                                 />
                                 <p className="text-xs text-gray-500 mt-3 text-center">
-                                    Point your camera at the barcode or QR code. The serial number will be read automatically.
+                                    Point your camera at the barcode or QR code, or upload an image from your gallery.
                                 </p>
                             </div>
                         )}
 
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={galleryFileInputRef}
+                            onChange={handleGalleryBarcodeScan}
+                            className="hidden"
+                        />
+                        <div id="web-barcode-reader-file-temp" className="hidden" />
+
+                        <button
+                            type="button"
+                            onClick={() => galleryFileInputRef.current?.click()}
+                            disabled={isProcessingGalleryImage}
+                            className="mt-4 w-full py-2.5 px-4 rounded-lg border border-gray-200 hover:border-[#1976d2] hover:bg-blue-50/50 text-[#1976d2] font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                        >
+                            <ImageIcon className="w-4 h-4" />
+                            <span>{isProcessingGalleryImage ? "Scanning image..." : "Upload from Gallery"}</span>
+                        </button>
+
                         <button
                             type="button"
                             onClick={() => setIsScanning(false)}
-                            className="mt-5 w-full py-2.5 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors"
+                            className="mt-2.5 w-full py-2.5 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
