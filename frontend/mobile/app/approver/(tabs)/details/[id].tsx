@@ -13,6 +13,7 @@ import { useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../services/supabase";
 import { MaterialIcons } from "@expo/vector-icons";
 import ZoomableImageModal from "../../../../components/ZoomableImageModal";
+import ClickableText from "../../../../components/ClickableText";
 
 type Announcement = {
   id: string;
@@ -157,7 +158,7 @@ export default function ApproverAnnouncementDetails() {
 
           <View style={styles.divider} />
 
-          <Text style={styles.description}>{announcement.description}</Text>
+          <ClickableText text={announcement.description} style={styles.description} />
         </View>
       </ScrollView>
 

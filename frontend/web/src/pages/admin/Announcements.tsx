@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { sendAnnouncementPushViaFirebase } from '../../services/firebaseMessaging';
+import ClickableText from '../../components/ClickableText';
 
 type Announcement = {
     id: string;
@@ -280,7 +281,8 @@ export default function AdminAnnouncements() {
                             className="border border-[#ccc] rounded-[8px] p-[12px] text-[16px] mb-[20px] bg-[#fafafa] outline-none focus:border-[#1976d2]"
                         />
 
-                        <label className="text-[16px] font-[600] mb-[8px] text-[#333]">Content *</label>
+                        <label className="text-[16px] font-[600] mb-[4px] text-[#333]">Content *</label>
+                        <p className="text-[12px] text-[#666] mb-[8px]">Tip: Links like https://example.com or [Click Here](https://example.com) will be clickable for users.</p>
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
@@ -421,9 +423,9 @@ export default function AdminAnnouncements() {
                                         />
                                     )}
 
-                                    <p className="text-[16px] text-[#555] leading-[24px]">
-                                        {item.description}
-                                    </p>
+                                    <div className="text-[16px] text-[#555] leading-[24px]">
+                                        <ClickableText text={item.description} />
+                                    </div>
                                 </div>
                             ))}
                         </div>

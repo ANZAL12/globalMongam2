@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Im
 import { supabase } from "../../../services/supabase";
 import { useRouter, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import ClickableText from "../../../components/ClickableText";
 
 type Announcement = {
     id: string;
@@ -155,7 +156,7 @@ export default function Announcements() {
                             <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
                         )}
 
-                        <Text style={styles.content} numberOfLines={3}>{item.description}</Text>
+                        <ClickableText text={item.description} style={styles.content} numberOfLines={3} />
                         
                         <View style={styles.readMore}>
                             <Text style={styles.readMoreText}>Read more</Text>

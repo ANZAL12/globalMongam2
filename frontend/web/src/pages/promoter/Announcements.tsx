@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
+import ClickableText from '../../components/ClickableText';
 
 type Announcement = {
     id: string; // UUID
@@ -105,11 +106,18 @@ export default function PromoterAnnouncements() {
             ) : (
                 <div className="pt-[15px]">
                     {announcements.map((item) => (
-                        <button
+                        <div
                             key={item.id}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             onClick={() => navigate(`/promoter/details/${item.id}`)}
-                            className="block w-[calc(100%-30px)] text-left bg-white mx-[15px] mb-[15px] p-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)]"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    navigate(`/promoter/details/${item.id}`);
+                                }
+                            }}
+                            className="block w-[calc(100%-30px)] text-left bg-white mx-[15px] mb-[15px] p-[15px] rounded-[8px] shadow-[0_2px_3px_rgba(0,0,0,0.1)] cursor-pointer hover:shadow-md transition-shadow"
                         >
                             <h3 className="text-[20px] font-bold text-[#333] mb-[5px]">{item.title}</h3>
                             <p className="text-[12px] text-[#888] mb-[10px]">
@@ -125,13 +133,13 @@ export default function PromoterAnnouncements() {
                                 />
                             )}
 
-                            <p className="text-[16px] text-[#555] leading-[24px] line-clamp-3">
-                                {item.description}
-                            </p>
+                            <div className="text-[16px] text-[#555] leading-[24px] line-clamp-3">
+                                <ClickableText text={item.description} />
+                            </div>
                             <div className="mt-[10px] flex justify-end text-[#1976d2] text-[14px] font-bold">
                                 Read more
                             </div>
-                        </button>
+                        </div>
                     ))}
                 </div>
             )}

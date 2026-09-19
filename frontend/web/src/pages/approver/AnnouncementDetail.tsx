@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import ClickableText from '../../components/ClickableText';
 
 type Announcement = {
     id: string;
@@ -98,7 +99,9 @@ export default function ApproverAnnouncementDetail() {
                 )}
 
                 <div className="h-px bg-[#eee] mb-[20px]" />
-                <p className="text-[16px] text-[#444] leading-[26px] whitespace-pre-wrap">{announcement.description}</p>
+                <p className="text-[16px] text-[#444] leading-[26px] whitespace-pre-wrap">
+                    <ClickableText text={announcement.description} />
+                </p>
             </div>
         </div>
     );

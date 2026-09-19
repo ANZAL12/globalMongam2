@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from "../../../services/supabase";
 import { useFocusEffect } from "expo-router";
 import { sendAnnouncementPushNotifications, sendAnnouncementPushViaFirebase } from "../../../services/notifications";
+import ClickableText from "../../../components/ClickableText";
 
 type Announcement = {
     id: string;
@@ -362,7 +363,7 @@ export default function AdminAnnouncements() {
                             />
                         )}
 
-                        <Text style={styles.content}>{item.description}</Text>
+                        <ClickableText text={item.description} style={styles.content} />
                     </TouchableOpacity>
                 )}
             />
@@ -390,6 +391,7 @@ export default function AdminAnnouncements() {
                     />
 
                     <Text style={styles.label}>Content / Message *</Text>
+                    <Text style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>Tip: Links like https://example.com or [Click Here](https://example.com) will be clickable.</Text>
                     <TextInput
                         style={[styles.input, styles.textArea]}
                         placeholder="Write the full announcement here..."
